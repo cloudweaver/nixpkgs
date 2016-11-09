@@ -4,23 +4,23 @@
   , python, zlib, perl, texLive, texinfo, xz
 }:
 
-assert stdenv.isLinux;
-
 let
   s = # Generated upstream information
   rec {
     baseName="asymptote";
-    version="2.36";
+    version="2.38";
     name="${baseName}-${version}";
-    hash="0l0pznrn4k3v07cmn5rx8nq088zjs9bv2mkcks65z5lqlk5pccnd";
-    url="mirror://sourceforge/project/asymptote/2.36/asymptote-2.36.src.tgz";
-    sha256="0l0pznrn4k3v07cmn5rx8nq088zjs9bv2mkcks65z5lqlk5pccnd";
+    hash="1dxwvq0xighqckkjkjva8s0igxfgy1j25z81pbwvlz6jzsrxpip9";
+    url="mirror://sourceforge/project/asymptote/2.38/asymptote-2.38.src.tgz";
+    sha256="1dxwvq0xighqckkjkjva8s0igxfgy1j25z81pbwvlz6jzsrxpip9";
   };
   buildInputs = [
-   freeglut ghostscriptX imagemagick fftw 
-   boehmgc mesa_glu mesa_noglu mesa_noglu.osmesa ncurses readline gsl libsigsegv
-   python zlib perl texLive texinfo xz
-  ];
+   ghostscriptX imagemagick fftw
+   boehmgc ncurses readline gsl libsigsegv
+   python zlib perl texLive texinfo xz ]
+   ++ stdenv.lib.optionals stdenv.isLinux
+     [ freeglut mesa_glu mesa_noglu mesa_noglu.osmesa ]
+   ;
 in
 stdenv.mkDerivation {
   inherit (s) name version;
@@ -40,7 +40,7 @@ stdenv.mkDerivation {
     configureFlags="$configureFlags --with-latex=$out/share/texmf/tex/latex --with-context=$out/share/texmf/tex/context/third"
   '';
 
-  NIX_CFLAGS_COMPILE = [ "-I${boehmgc}/include/gc" ];
+  NIX_CFLAGS_COMPILE = [ "-I${boehmgc.dev}/include/gc" ];
 
   postInstall = ''
     mv -v "$out/share/info/asymptote/"*.info $out/share/info/
@@ -51,11 +51,11 @@ stdenv.mkDerivation {
 
   enableParallelBuilding = true;
 
-  meta = {
+  meta = with stdenv.lib; {
     inherit (s) version;
     description =  "A tool for programming graphics intended to replace Metapost";
-    license = stdenv.lib.licenses.gpl3Plus;
-    maintainers = [stdenv.lib.maintainers.raskin stdenv.lib.maintainers.simons];
-    platforms = stdenv.lib.platforms.linux;
+    license = licenses.gpl3Plus;
+    maintainers = [ maintainers.raskin maintainers.peti ];
+    platforms = platforms.linux ++ platforms.darwin;
   };
 }

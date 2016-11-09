@@ -89,41 +89,46 @@ in
     };
   }).override { buildInputs = [ unzip ]; };
 
-  urlresolver = (mkKodiPlugin rec {
-
-    plugin = "urlresolver";
-    namespace = "script.module.urlresolver";
-    version = "2.10.0";
-
-    src = fetchFromGitHub {
-      name = plugin + "-" + version + ".tar.gz";
-      owner = "Eldorados";
-      repo = namespace;
-      rev = "72b9d978d90d54bb7a0224a1fd2407143e592984";
-      sha256 = "0r5glfvgy9ri3ar9zdkvix8lalr1kfp22fap2pqp739b6k2iqir6";
+  hyper-launcher = let
+    pname = "hyper-launcher";
+    version = "1.2.0";
+    src = fetchFromGitHub rec {
+      name = pname + "-" + version + ".tar.gz";
+      owner = "teeedubb";
+      repo = owner + "-xbmc-repo";
+      rev = "9bd170407436e736d2d709f8af9968238594669c";
+      sha256 = "019nqf7kixicnrzkg671x4yq723igjkhfl8hz5bifi9gx2qcy8hy";
     };
-
     meta = with stdenv.lib; {
-      homepage = "https://github.com/Eldorados/urlresolver";
-      description = "Resolve common video host URL's to be playable in XBMC/Kodi";
+      homepage = http://forum.kodi.tv/showthread.php?tid=258159;
+      description = "A ROM launcher for Kodi that uses HyperSpin assets.";
       maintainers = with maintainers; [ edwtjo ];
     };
-  }).override {
-    postPatch = "sed -i -e 's,settings_file = os.path.join(addon_path,settings_file = os.path.join(profile_path,g' lib/urlresolver/common.py";
+  in {
+    service = mkKodiPlugin {
+      plugin = pname + "-service";
+      namespace = "service.hyper.launcher";
+      inherit version src meta;
+    };
+    plugin = mkKodiPlugin {
+      plugin = pname;
+      namespace = "plugin.hyper.launcher";
+      inherit version src meta;
+    };
   };
 
   salts = mkKodiPlugin rec {
 
     plugin = "salts";
     namespace = "plugin.video.salts";
-    version = "2.0.6";
+    version = "2.0.19";
 
     src = fetchFromGitHub {
       name = plugin + "-" + version + ".tar.gz";
       owner = "tknorris";
       repo = plugin;
-      rev = "5100565bec5818cdcd8a891ab6a6d67b0018e070";
-      sha256 = "00nlcddmgzyi3462i12qikdryfwqzqd1i30rkp485ay16akyj0lr";
+      rev = "9c1882bad35cab9e62687847e097c37a576b900d";
+      sha256 = "0saq578xsxvyg1v8jg2m3131hfrr95gv74b2npxr7g715yyx5bjq";
     };
 
     meta = with stdenv.lib; {
@@ -137,14 +142,14 @@ in
 
     plugin = "svtplay";
     namespace = "plugin.video.svtplay";
-    version = "4.0.21";
+    version = "4.0.24";
 
     src = fetchFromGitHub {
       name = plugin + "-" + version + ".tar.gz";
       owner = "nilzen";
       repo = "xbmc-" + plugin;
-      rev = "1fb099dcddc65e58ca8691d19de657321b1b1fc2";
-      sha256 = "178krh8kzll7cprqwyhydb41b1jh961av875bm5yfdlplzaiynm0";
+      rev = "e66e2af6529e3ffd030ad486c849894a9ffdeb45";
+      sha256 = "01nq6gac83q6ayhqcj1whvk58pzrm1haw801s321f4vc8gswag56";
     };
 
     meta = with stdenv.lib; {
@@ -166,13 +171,13 @@ in
 
     plugin = "steam-launcher";
     namespace = "script.steam.launcher";
-    version = "3.1.1";
+    version = "3.1.4";
 
     src = fetchFromGitHub rec {
       owner = "teeedubb";
       repo = owner + "-xbmc-repo";
-      rev = "bb66db7c4927619485373699ff865a9b00e253bb";
-      sha256 = "1skjkz0h6nkg04vylhl4zzavf5lba75j0qbgdhb9g7h0a98jz7s4";
+      rev = "db67704c3e16bdcdd3bdfe2926c609f1f6bdc4fb";
+      sha256 = "001a7zs3a4jfzj8ylxv2klc33mipmqsd5aqax7q81fbgwdlndvbm";
     };
 
     meta = with stdenv.lib; {
@@ -189,6 +194,59 @@ in
     };
   }).override {
     propagatedBuildinputs = [ steam ];
+  };
+
+  pdfreader = mkKodiPlugin rec {
+    plugin = "pdfreader";
+    namespace = "plugin.image.pdf";
+    version = "1.0.2";
+
+    src = fetchFromGitHub rec {
+      name = plugin + "-" + version + ".tar.gz";
+      owner = "teeedubb";
+      repo = owner + "-xbmc-repo";
+      rev = "0a405b95208ced8a1365ad3193eade8d1c2117ce";
+      sha256 = "1iv7d030z3xvlflvp4p5v3riqnwg9g0yvzxszy63v1a6x5kpjkqa";
+    };
+
+    meta = with stdenv.lib; {
+      homepage = http://forum.kodi.tv/showthread.php?tid=187421;
+      descritpion = "A comic book reader";
+      maintainers = with maintainers; [ edwtjo ];
+    };
+  };
+
+  pvr-hts = (mkKodiPlugin rec {
+    plugin = "pvr-hts";
+    namespace = "pvr.hts";
+    version = "2.2.13";
+
+    src = fetchFromGitHub {
+      owner = "kodi-pvr";
+      repo = "pvr.hts";
+      rev = "3274354511e970e2101c2aa437001b2f245f80da";
+      sha256 = "0i7cb61pjv6vbj3x96cm1n4w91mvc8z6lxa8ykjasrrbi95ph7ld";
+    };
+
+    meta = with stdenv.lib; {
+      homepage = https://github.com/kodi-pvr/pvr.hts;
+      description = "Kodi's Tvheadend HTSP client addon";
+      platforms = platforms.all;
+      maintainers = with maintainers; [ page ];
+    };
+  }).override {
+    buildInputs = [ cmake kodi libcec_platform kodi-platform ];
+
+    # disables check ensuring install prefix is that of kodi
+    cmakeFlags = [ "-DOVERRIDE_PATHS=1" ];
+
+    # kodi checks for plugin .so libs existance in the addon folder (share/...)
+    # and the non-wrapped kodi lib/... folder before even trying to dlopen
+    # them. Symlinking .so, as setting LD_LIBRARY_PATH is of no use
+    installPhase = ''
+      make install
+      ln -s $out/lib/addons/pvr.hts/pvr.hts.so* $out/share/kodi/addons/pvr.hts
+    '';
   };
 
   t0mm0-common = mkKodiPlugin rec {
@@ -212,36 +270,26 @@ in
     };
   };
 
-  pvr-hts = (mkKodiPlugin rec {
-    plugin = "pvr-hts";
-    namespace = "pvr.hts";
-    version = "2.1.18";
+  urlresolver = (mkKodiPlugin rec {
+
+    plugin = "urlresolver";
+    namespace = "script.module.urlresolver";
+    version = "2.10.0";
 
     src = fetchFromGitHub {
-      owner = "kodi-pvr";
-      repo = "pvr.hts";
-      rev = "016b0b3251d6d5bffaf68baf59010e4347759c4a";
-      sha256 = "03lhxipz03r516pycabqc9b89kd7wih3c2dr4p602bk64bsmpi0j";
+      name = plugin + "-" + version + ".tar.gz";
+      owner = "Eldorados";
+      repo = namespace;
+      rev = "72b9d978d90d54bb7a0224a1fd2407143e592984";
+      sha256 = "0r5glfvgy9ri3ar9zdkvix8lalr1kfp22fap2pqp739b6k2iqir6";
     };
 
     meta = with stdenv.lib; {
-      homepage = https://github.com/kodi-pvr/pvr.hts;
-      description = "Kodi's Tvheadend HTSP client addon";
-      platforms = platforms.all;
-      maintainers = with maintainers; [ page ];
+      homepage = "https://github.com/Eldorados/urlresolver";
+      description = "Resolve common video host URL's to be playable in XBMC/Kodi";
+      maintainers = with maintainers; [ edwtjo ];
     };
   }).override {
-    buildInputs = [ cmake kodi libcec_platform kodi-platform ];
-
-    # disables check ensuring install prefix is that of kodi
-    cmakeFlags = [ "-DOVERRIDE_PATHS=1" ];
-
-    # kodi checks for plugin .so libs existance in the addon folder (share/...)
-    # and the non-wrapped kodi lib/... folder before even trying to dlopen
-    # them. Symlinking .so, as setting LD_LIBRARY_PATH is of no use
-    installPhase = ''
-      make install
-      ln -s $out/lib/kodi/addons/pvr.hts/pvr.hts.so $out/share/kodi/addons/pvr.hts
-    '';
+    postPatch = "sed -i -e 's,settings_file = os.path.join(addon_path,settings_file = os.path.join(profile_path,g' lib/urlresolver/common.py";
   };
 }

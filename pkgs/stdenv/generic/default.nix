@@ -44,7 +44,7 @@ let
       throw "whitelistedLicenses and blacklistedLicenses are not mutually exclusive.";
 
   hasLicense = attrs:
-    builtins.hasAttr "meta" attrs && builtins.hasAttr "license" attrs.meta;
+    attrs ? meta.license;
 
   hasWhitelistedLicense = assert areLicenseListsValid; attrs:
     hasLicense attrs && builtins.elem attrs.meta.license whitelist;
@@ -82,14 +82,23 @@ let
       ../../build-support/setup-hooks/compress-man-pages.sh
       ../../build-support/setup-hooks/strip.sh
       ../../build-support/setup-hooks/patch-shebangs.sh
+      ../../build-support/setup-hooks/multiple-outputs.sh
       ../../build-support/setup-hooks/move-sbin.sh
       ../../build-support/setup-hooks/move-lib64.sh
       ../../build-support/setup-hooks/set-source-date-epoch-to-latest.sh
       cc
     ];
 
-  # Add a utility function to produce derivations that use this
-  # stdenv and its shell.
+  # `mkDerivation` wraps the builtin `derivation` function to
+  # produce derivations that use this stdenv and its shell.
+  #
+  # See also:
+  #
+  # * https://nixos.org/nixpkgs/manual/#sec-using-stdenv
+  #   Details on how to use this mkDerivation function
+  #
+  # * https://nixos.org/nix/manual/#ssec-derivation
+  #   Explanation about derivations in general
   mkDerivation =
     { buildInputs ? []
     , nativeBuildInputs ? []
@@ -119,8 +128,7 @@ let
       throwEvalHelp = { reason, errormsg }:
         # uppercase the first character of string s
         let up = s: with lib;
-          let cs = lib.stringToCharacters s;
-          in concatStrings (singleton (toUpper (head cs)) ++ tail cs);
+          (toUpper (substring 0 1 s)) + (substring 1 (stringLength s) s);
         in
         assert builtins.elem reason ["unfree" "broken" "blacklisted"];
 
@@ -157,8 +165,12 @@ let
         outputs ++
         (if separateDebugInfo then assert result.isLinux; [ "debug" ] else []);
 
-      buildInputs' = buildInputs ++
+      buildInputs' = lib.chooseDevOutputs buildInputs ++
         (if separateDebugInfo then [ ../../build-support/setup-hooks/separate-debug-info.sh ] else []);
+
+      nativeBuildInputs' = lib.chooseDevOutputs nativeBuildInputs;
+      propagatedBuildInputs' = lib.chooseDevOutputs propagatedBuildInputs;
+      propagatedNativeBuildInputs' = lib.chooseDevOutputs propagatedNativeBuildInputs;
 
     in
 
@@ -175,13 +187,13 @@ let
            "sandboxProfile" "propagatedSandboxProfile"])
         // (let
           computedSandboxProfile =
-            lib.concatMap (input: input.__propagatedSandboxProfile or []) (extraBuildInputs ++ buildInputs ++ nativeBuildInputs);
+            lib.concatMap (input: input.__propagatedSandboxProfile or []) (extraBuildInputs ++ buildInputs' ++ nativeBuildInputs');
           computedPropagatedSandboxProfile =
-            lib.concatMap (input: input.__propagatedSandboxProfile or []) (propagatedBuildInputs ++ propagatedNativeBuildInputs);
+            lib.concatMap (input: input.__propagatedSandboxProfile or []) (propagatedBuildInputs' ++ propagatedNativeBuildInputs');
           computedImpureHostDeps =
-            lib.unique (lib.concatMap (input: input.__propagatedImpureHostDeps or []) (extraBuildInputs ++ buildInputs ++ nativeBuildInputs));
+            lib.unique (lib.concatMap (input: input.__propagatedImpureHostDeps or []) (extraBuildInputs ++ buildInputs' ++ nativeBuildInputs'));
           computedPropagatedImpureHostDeps =
-            lib.unique (lib.concatMap (input: input.__propagatedImpureHostDeps or []) (propagatedBuildInputs ++ propagatedNativeBuildInputs));
+            lib.unique (lib.concatMap (input: input.__propagatedImpureHostDeps or []) (propagatedBuildInputs' ++ propagatedNativeBuildInputs'));
         in
         {
           builder = attrs.realBuilder or shell;
@@ -193,11 +205,17 @@ let
 
           # Inputs built by the cross compiler.
           buildInputs = if crossConfig != null then buildInputs' else [];
-          propagatedBuildInputs = if crossConfig != null then propagatedBuildInputs else [];
+          propagatedBuildInputs = if crossConfig != null then propagatedBuildInputs' else [];
           # Inputs built by the usual native compiler.
-          nativeBuildInputs = nativeBuildInputs ++ (if crossConfig == null then buildInputs' else []);
-          propagatedNativeBuildInputs = propagatedNativeBuildInputs ++
-            (if crossConfig == null then propagatedBuildInputs else []);
+          nativeBuildInputs = nativeBuildInputs'
+            ++ lib.optionals (crossConfig == null) buildInputs'
+            ++ lib.optional
+                (result.isCygwin
+                  || (crossConfig != null && lib.hasSuffix "mingw32" crossConfig))
+                ../../build-support/setup-hooks/win-dll-link.sh
+            ;
+          propagatedNativeBuildInputs = propagatedNativeBuildInputs' ++
+            (if crossConfig == null then propagatedBuildInputs' else []);
         } // ifDarwin {
           # TODO: remove lib.unique once nix has a list canonicalization primitive
           __sandboxProfile =
@@ -216,15 +234,29 @@ let
           outputs = outputs';
         } else { })))) (
       {
+        overrideAttrs = f: mkDerivation (attrs // (f attrs));
         # The meta attribute is passed in the resulting attribute set,
         # but it's not part of the actual derivation, i.e., it's not
         # passed to the builder and is not a dependency.  But since we
-        # include it in the result, it *is* available to nix-env for
-        # queries.  We also a meta.position attribute here to
-        # identify the source location of the package.
-        meta = meta // (if pos' != null then {
-          position = pos'.file + ":" + toString pos'.line;
-        } else {});
+        # include it in the result, it *is* available to nix-env for queries.
+        meta = { }
+            # If the packager hasn't specified `outputsToInstall`, choose a default,
+            # which is the name of `p.bin or p.out or p`;
+            # if he has specified it, it will be overridden below in `// meta`.
+            #   Note: This default probably shouldn't be globally configurable.
+            #   Services and users should specify outputs explicitly,
+            #   unless they are comfortable with this default.
+          // { outputsToInstall =
+            let
+              outs = outputs'; # the value passed to derivation primitive
+              hasOutput = out: builtins.elem out outs;
+            in [( lib.findFirst hasOutput null (["bin" "out"] ++ outs) )];
+          }
+          // meta
+            # Fill `meta.position` to identify the source location of the package.
+          // lib.optionalAttrs (pos' != null)
+            { position = pos'.file + ":" + toString pos'.line; }
+          ;
         inherit passthru;
       } //
       # Pass through extra attributes that are not inputs, but
@@ -254,7 +286,10 @@ let
 
     // rec {
 
-      meta.description = "The default build environment for Unix packages in Nixpkgs";
+      meta = {
+        description = "The default build environment for Unix packages in Nixpkgs";
+        platforms = lib.platforms.all;
+      };
 
       # Utility flags to test the type of platform.
       isDarwin = system == "x86_64-darwin";

@@ -51,7 +51,13 @@ let
   '';
 
   carbonEnv = {
-    PYTHONPATH = "${pkgs.python27Packages.carbon}/lib/python2.7/site-packages";
+    PYTHONPATH = let
+      cenv = pkgs.python.buildEnv.override {
+        extraLibs = [ pkgs.python27Packages.carbon ];
+      };
+      cenvPack =  "${cenv}/${pkgs.python.sitePackages}";
+    # opt/graphite/lib contains twisted.plugins.carbon-cache
+    in "${cenvPack}/opt/graphite/lib:${cenvPack}";
     GRAPHITE_ROOT = dataDir;
     GRAPHITE_CONF_DIR = configDir;
     GRAPHITE_STORAGE_DIR = dataDir;
@@ -161,7 +167,7 @@ in {
             CACHE_TYPE: 'filesystem'
             CACHE_DIR: '/tmp/graphite-api-cache'
         '';
-        type = types.str;
+        type = types.lines;
       };
     };
 
@@ -381,10 +387,10 @@ in {
       systemd.services.carbonCache = let name = "carbon-cache"; in {
         description = "Graphite Data Storage Backend";
         wantedBy = [ "multi-user.target" ];
-        after = [ "network-interfaces.target" ];
+        after = [ "network.target" ];
         environment = carbonEnv;
         serviceConfig = {
-          ExecStart = "${pkgs.twisted}/bin/twistd ${carbonOpts name}";
+          ExecStart = "${pkgs.pythonPackages.twisted}/bin/twistd ${carbonOpts name}";
           User = "graphite";
           Group = "graphite";
           PermissionsStartOnly = true;
@@ -404,10 +410,10 @@ in {
         enable = cfg.carbon.enableAggregator;
         description = "Carbon Data Aggregator";
         wantedBy = [ "multi-user.target" ];
-        after = [ "network-interfaces.target" ];
+        after = [ "network.target" ];
         environment = carbonEnv;
         serviceConfig = {
-          ExecStart = "${pkgs.twisted}/bin/twistd ${carbonOpts name}";
+          ExecStart = "${pkgs.pythonPackages.twisted}/bin/twistd ${carbonOpts name}";
           User = "graphite";
           Group = "graphite";
           PIDFile="/run/${name}/${name}.pid";
@@ -420,10 +426,10 @@ in {
       systemd.services.carbonRelay = let name = "carbon-relay"; in {
         description = "Carbon Data Relay";
         wantedBy = [ "multi-user.target" ];
-        after = [ "network-interfaces.target" ];
+        after = [ "network.target" ];
         environment = carbonEnv;
         serviceConfig = {
-          ExecStart = "${pkgs.twisted}/bin/twistd ${carbonOpts name}";
+          ExecStart = "${pkgs.pythonPackages.twisted}/bin/twistd ${carbonOpts name}";
           User = "graphite";
           Group = "graphite";
           PIDFile="/run/${name}/${name}.pid";
@@ -442,13 +448,24 @@ in {
       systemd.services.graphiteWeb = {
         description = "Graphite Web Interface";
         wantedBy = [ "multi-user.target" ];
-        after = [ "network-interfaces.target" ];
+        after = [ "network.target" ];
         path = [ pkgs.perl ];
         environment = {
-          PYTHONPATH = "${pkgs.python27Packages.graphite_web}/lib/python2.7/site-packages";
+          PYTHONPATH = let
+              penv = pkgs.python.buildEnv.override {
+                extraLibs = [
+                  pkgs.python27Packages.graphite_web
+                  pkgs.python27Packages.pysqlite
+                ];
+              };
+              penvPack = "${penv}/${pkgs.python.sitePackages}";
+              # opt/graphite/webapp contains graphite/settings.py
+              # explicitly adding pycairo in path because it cannot be imported via buildEnv
+            in "${penvPack}/opt/graphite/webapp:${penvPack}:${pkgs.pythonPackages.pycairo}/${pkgs.python.sitePackages}";
           DJANGO_SETTINGS_MODULE = "graphite.settings";
           GRAPHITE_CONF_DIR = configDir;
           GRAPHITE_STORAGE_DIR = dataDir;
+          LD_LIBRARY_PATH = "${pkgs.cairo.out}/lib";
         };
         serviceConfig = {
           ExecStart = ''
@@ -484,13 +501,15 @@ in {
       systemd.services.graphiteApi = {
         description = "Graphite Api Interface";
         wantedBy = [ "multi-user.target" ];
-        after = [ "network-interfaces.target" ];
+        after = [ "network.target" ];
         environment = {
-          PYTHONPATH =
-            "${cfg.api.package}/lib/python2.7/site-packages:" +
-            concatMapStringsSep ":" (f: f + "/lib/python2.7/site-packages") cfg.api.finders;
+          PYTHONPATH = let
+              aenv = pkgs.python.buildEnv.override {
+                extraLibs = [ cfg.api.package pkgs.cairo ] ++ cfg.api.finders;
+              };
+            in "${aenv}/${pkgs.python.sitePackages}";
           GRAPHITE_API_CONFIG = graphiteApiConfig;
-          LD_LIBRARY_PATH = "${pkgs.cairo}/lib";
+          LD_LIBRARY_PATH = "${pkgs.cairo.out}/lib";
         };
         serviceConfig = {
           ExecStart = ''
@@ -519,7 +538,7 @@ in {
       systemd.services.seyren = {
         description = "Graphite Alerting Dashboard";
         wantedBy = [ "multi-user.target" ];
-        after = [ "network-interfaces.target" "mongodb.service" ];
+        after = [ "network.target" "mongodb.service" ];
         environment = seyrenConfig;
         serviceConfig = {
           ExecStart = "${pkgs.seyren}/bin/seyren -httpPort ${toString cfg.seyren.port}";
@@ -542,7 +561,7 @@ in {
       systemd.services.graphitePager = {
         description = "Graphite Pager Alerting Daemon";
         wantedBy = [ "multi-user.target" ];
-        after = [ "network-interfaces.target" "redis.service" ];
+        after = [ "network.target" "redis.service" ];
         environment = {
           REDIS_URL = cfg.pager.redisUrl;
           GRAPHITE_URL = cfg.pager.graphiteUrl;

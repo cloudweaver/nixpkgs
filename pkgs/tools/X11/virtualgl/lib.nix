@@ -1,17 +1,15 @@
 { stdenv, fetchurl, cmake, mesa, libX11, libXv, libjpeg_turbo, fltk }:
 
-let
-  version = "2.4.1";
-in
-stdenv.mkDerivation {
+stdenv.mkDerivation rec {
   name = "virtualgl-lib-${version}";
+  version = "2.5";
 
   src = fetchurl {
     url = "mirror://sourceforge/virtualgl/VirtualGL-${version}.tar.gz";
-    sha256 = "0bngb4hrl0kn19qb3sa6mg6dbaahfk09gx2ng18l00xm6pmwd298";
+    sha256 = "1mnpljmx8nxnmpbx4ja430b3y535wkz185qknsxmk27yz4dbmm8l";
   };
 
-  cmakeFlags = [ "-DVGL_SYSTEMFLTK=1" "-DTJPEG_LIBRARY=${libjpeg_turbo}/lib/libturbojpeg.so" ];
+  cmakeFlags = [ "-DVGL_SYSTEMFLTK=1" "-DTJPEG_LIBRARY=${libjpeg_turbo.out}/lib/libturbojpeg.so" ];
 
   makeFlags = [ "PREFIX=$(out)" ];
 
@@ -19,8 +17,10 @@ stdenv.mkDerivation {
 
   buildInputs = [ libjpeg_turbo mesa fltk libX11 libXv ];
 
+  enableParallelBuilding = true;
+
   meta = with stdenv.lib; {
-    homepage = http://www.virtualgl.org/;
+    homepage = "http://www.virtualgl.org/";
     description = "X11 GL rendering in a remote computer with full 3D hw acceleration";
     license = licenses.free; # many parts under different free licenses
     platforms = platforms.linux;

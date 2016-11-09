@@ -6,8 +6,6 @@ pythonPackages.buildPythonApplication rec {
   version = "1.1.2";
   name = "${pname}-${version}";
 
-  namePrefix = "";
-
   src = fetchFromGitHub {
     owner = pname;
     repo  = pname;
@@ -15,8 +13,16 @@ pythonPackages.buildPythonApplication rec {
     sha256 = "0zk9clfawsnwmgjbk7y5d526ksxd1pkh09ln6sb06v4ygaiifcxp";
   };
 
+  # No tests in repo
+  doCheck = false;
+
   postPatch = ''
     substituteInPlace setup.py --replace "/usr/share" "$out/share"
+  '';
+
+  postInstall = ''
+    mkdir -p $out/share/applications
+    cp -v data/pithos.desktop $out/share/applications
   '';
 
   buildInputs = [ wrapGAppsHook ];

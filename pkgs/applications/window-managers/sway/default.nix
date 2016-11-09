@@ -1,40 +1,43 @@
-{ lib, stdenv, fetchurl, makeWrapper, cmake, pkgconfig
-, wayland, wlc, libxkbcommon, pixman, fontconfig, pcre, json_c, asciidoc, libxslt, dbus_libs
+{ stdenv, fetchFromGitHub, pango, libinput
+, makeWrapper, cmake, pkgconfig, asciidoc, libxslt, docbook_xsl, cairo
+, wayland, wlc, libxkbcommon, pixman, fontconfig, pcre, json_c, dbus_libs
 }:
 
-stdenv.mkDerivation rec {
-  name = "sway-${version}";
-  version = "git-2016-02-08";
-  repo = "https://github.com/SirCmpwn/sway";
-  rev = "16e904634c65128610537bed7fcb16ac3bb45165";
+let
+  version = "0.9";
+in
+  stdenv.mkDerivation rec {
+    name = "sway-${version}";
 
-  src = fetchurl {
-    url = "${repo}/archive/${rev}.tar.gz";
-    sha256 = "52d6c4b49fea69e2a2c1b44b858908b7736301bdb9ed483c294bc54bb40e872e";
-  };
+    src = fetchFromGitHub {
+      owner = "Sircmpwn";
+      repo = "sway";
+      rev = "${version}";
+      sha256 = "0qqqg23rknxnjcgvkfrx3pijqc3dvi74qmmavq07vy2qfs1xlwg0";
+    };
 
-  nativeBuildInputs = [ cmake pkgconfig ];
+    nativeBuildInputs = [ makeWrapper cmake pkgconfig asciidoc libxslt docbook_xsl ];
 
-  buildInputs = [ makeWrapper wayland wlc libxkbcommon pixman fontconfig pcre json_c asciidoc libxslt dbus_libs ];
+    buildInputs = [ wayland wlc libxkbcommon pixman fontconfig pcre json_c dbus_libs pango cairo libinput ];
 
-  patchPhase = ''
-    sed -i s@/etc/sway@$out/etc/sway@g CMakeLists.txt;
-  '';
+    patchPhase = ''
+      sed -i s@/etc/sway@$out/etc/sway@g CMakeLists.txt;
+    '';
 
-  makeFlags = "PREFIX=$(out)";
-  installPhase = "PREFIX=$out make install";
+    makeFlags = "PREFIX=$(out)";
+    installPhase = "PREFIX=$out make install";
 
-  LD_LIBRARY_PATH = lib.makeLibraryPath [ wlc dbus_libs ];
-  preFixup = ''
-    wrapProgram $out/bin/sway \
-      --prefix LD_LIBRARY_PATH : "${LD_LIBRARY_PATH}";
-  '';
+    LD_LIBRARY_PATH = stdenv.lib.makeLibraryPath [ wlc dbus_libs ];
+    preFixup = ''
+      wrapProgram $out/bin/sway \
+        --prefix LD_LIBRARY_PATH : "${LD_LIBRARY_PATH}";
+    '';
 
-  meta = {
-    description = "i3-compatible window manager for Wayland";
-    homepage    = "http://swaywm.org";
-    license     = lib.licenses.mit;
-    platforms   = lib.platforms.linux;
-    maintainers = with lib.maintainers; [ ];
-  };
-}
+    meta = with stdenv.lib; {
+      description = "i3-compatible window manager for Wayland";
+      homepage    = "http://swaywm.org";
+      license     = licenses.mit;
+      platforms   = platforms.linux;
+      maintainers = with maintainers; [ ];
+    };
+  }

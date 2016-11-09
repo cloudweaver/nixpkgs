@@ -20,13 +20,7 @@ let
   # "gnu", etc.).
   sites = builtins.attrNames mirrors;
 
-  impureEnvVars = [
-    # We borrow these environment variables from the caller to allow
-    # easy proxy configuration.  This is impure, but a fixed-output
-    # derivation like fetchurl is allowed to do so since its result is
-    # by definition pure.
-    "http_proxy" "https_proxy" "ftp_proxy" "all_proxy" "no_proxy"
-
+  impureEnvVars = stdenv.lib.fetchers.proxyImpureEnvVars ++ [
     # This variable allows the user to pass additional options to curl
     "NIX_CURL_FLAGS"
 
@@ -61,6 +55,7 @@ in
 , md5 ? ""
 , sha1 ? ""
 , sha256 ? ""
+, sha512 ? ""
 
 , recursiveHash ? false
 
@@ -86,12 +81,13 @@ in
 
 assert builtins.isList urls;
 assert (urls == []) != (url == "");
+assert sha512 != "" -> builtins.compareVersions "1.11" builtins.nixVersion <= 0;
 
 
 let
 
   hasHash = showURLs || (outputHash != "" && outputHashAlgo != "")
-    || md5 != "" || sha1 != "" || sha256 != "";
+    || md5 != "" || sha1 != "" || sha256 != "" || sha512 != "";
   urls_ = if urls != [] then urls else [url];
 
 in
@@ -114,9 +110,10 @@ if (!hasHash) then throw "Specify hash for fetchurl fixed-output derivation: ${s
 
   # New-style output content requirements.
   outputHashAlgo = if outputHashAlgo != "" then outputHashAlgo else
-      if sha256 != "" then "sha256" else if sha1 != "" then "sha1" else "md5";
+      if sha512 != "" then "sha512" else if sha256 != "" then "sha256" else if sha1 != "" then "sha1" else "md5";
   outputHash = if outputHash != "" then outputHash else
-      if sha256 != "" then sha256 else if sha1 != "" then sha1 else md5;
+      if sha512 != "" then sha512 else if sha256 != "" then sha256 else if sha1 != "" then sha1 else
+        (stdenv.lib.fetchMD5warn "fetchurl" (builtins.head urls_) md5);
 
   outputHashMode = if (recursiveHash || executable) then "recursive" else "flat";
 

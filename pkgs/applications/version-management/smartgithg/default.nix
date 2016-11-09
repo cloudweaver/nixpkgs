@@ -1,6 +1,6 @@
 { stdenv, fetchurl, lib, makeWrapper
 , jre
-, gtk, glib
+, gtk2, glib
 , libXtst
 , git, mercurial, subversion
 , which
@@ -8,29 +8,28 @@
 
 stdenv.mkDerivation rec {
   name = "smartgithg-${version}";
-  version = "7_1_0";
+  version = "8_0_3";
 
   src = fetchurl {
-    url = "http://www.syntevo.com/downloads/smartgit/smartgit-linux-${version}.tar.gz";
-    sha256 = "0nlv2ipmv3z1j4642gfsrpsgc2y4mxngiz6mz3nidrbrkz0ylsvy";
+    url = "http://www.syntevo.com/static/smart/download/smartgit/smartgit-linux-${version}.tar.gz";
+    sha256 = "1ghxjg5dm22kwfrq26nqp4qhh6h7f4l4fnf1cx9cksd30ypwy223";
   };
 
-  buildInputs = [
-    makeWrapper
-    jre
-  ];
+  nativeBuildInputs = [ makeWrapper ];
+
+  buildInputs = [ jre ];
 
   buildCommand = let
     pkg_path = "$out/${name}";
     bin_path = "$out/bin";
     install_freedesktop_items = ./install_freedesktop_items.sh;
-    runtime_paths = lib.makeSearchPath "bin" [
+    runtime_paths = lib.makeBinPath [
       jre
       #git mercurial subversion # the paths are requested in configuration
       which
     ];
     runtime_lib_paths = lib.makeLibraryPath [
-      gtk glib
+      gtk2 glib
       libXtst
     ];
   in ''
@@ -58,5 +57,6 @@ stdenv.mkDerivation rec {
     homepage = http://www.syntevo.com/smartgit/;
     license = licenses.unfree;
     platforms = platforms.linux;
+    maintainers = with stdenv.lib.maintainers; [ jraygauthier ];
   };
 }

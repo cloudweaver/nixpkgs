@@ -9,7 +9,7 @@ let
   common = { name, src }: stdenv.mkDerivation rec {
     inherit name src;
 
-    outputs = [ "out" "doc" ];
+    outputs = [ "out" "dev" "man" "doc" ];
 
     nativeBuildInputs = [ perl pkgconfig ];
 
@@ -22,8 +22,8 @@ let
     # would end up using the wrong bzip2 when cross-compiling.
     # XXX: The right thing would be to reinstate `--with-bzip2' in Nix.
     postUnpack =
-      '' export CPATH="${bzip2}/include"
-         export LIBRARY_PATH="${bzip2}/lib"
+      '' export CPATH="${bzip2.dev}/include"
+         export LIBRARY_PATH="${bzip2.out}/lib"
          export CXXFLAGS="-Wno-error=reserved-user-defined-literal"
       '';
 
@@ -41,7 +41,7 @@ let
 
     installFlags = "sysconfdir=$(out)/etc";
 
-    doInstallCheck = false;
+    doInstallCheck = true;
 
     separateDebugInfo = stdenv.isLinux;
 
@@ -89,22 +89,19 @@ in rec {
   nix = nixStable;
 
   nixStable = common rec {
-    name = "nix-1.11.2";
+    name = "nix-1.11.4";
     src = fetchurl {
       url = "http://nixos.org/releases/nix/${name}/${name}.tar.xz";
-      sha256 = "fc1233814ebb385a2a991c1fb88c97b344267281e173fea7d9acd3f9caf969d6";
+      sha256 = "937779ed2efaa3dec210250635401980acb99a6fea6d7374fbaea78231b36d34";
     };
   };
 
-  nixUnstable = nixStable;
-  /*
   nixUnstable = lib.lowPrio (common rec {
-    name = "nix-1.11pre4379_786046c";
+    name = "nix-1.12pre4523_3b81b26";
     src = fetchurl {
-      url = "http://hydra.nixos.org/build/30375557/download/4/${name}.tar.xz";
-      sha256 = "ff42c70697fce7ca6eade622a31e5fbe45aed0edf1204fb491b40df207a807d5";
+      url = "http://hydra.nixos.org/build/33598573/download/4/${name}.tar.xz";
+      sha256 = "0469zv09m85824w4vqj2ag0nciq51xvrvsys7bd5v4nrxihk9991";
     };
   });
-  */
 
 }

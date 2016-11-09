@@ -1,6 +1,6 @@
-{ stdenv, fetchFromGitHub, cmake, gettext, glib, libmsgpack, libtermkey
-, libtool, libuv, lpeg, lua, luajit, luaMessagePack, luabitop, ncurses, perl
-, pkgconfig, unibilium, makeWrapper, vimUtils
+{ stdenv, fetchFromGitHub, cmake, gettext, libmsgpack, libtermkey
+, libtool, libuv, luajit, luaPackages, man, ncurses, perl, pkgconfig
+, unibilium, makeWrapper, vimUtils, xsel, gperf
 
 , withPython ? true, pythonPackages, extraPythonPackages ? []
 , withPython3 ? true, python3Packages, extraPython3Packages ? []
@@ -18,13 +18,13 @@ let
   # Note: this is NOT the libvterm already in nixpkgs, but some NIH silliness:
   neovimLibvterm = stdenv.mkDerivation rec {
     name = "neovim-libvterm-${version}";
-    version = "2015-11-06";
+    version = "2016-10-07";
 
     src = fetchFromGitHub {
-      sha256 = "090pyf1n5asaw1m2l9bsbdv3zd753aq1plb0w0drbc2k43ds7k3g";
-      rev = "a9c7c6fd20fa35e0ad3e0e98901ca12dfca9c25c";
-      repo = "libvterm";
       owner = "neovim";
+      repo = "libvterm";
+      rev = "e0a3d4dbd44a9534bf7437ee98ceb26dabebf3ad";
+      sha256 = "131mcnbdq4wvsf280v4az8vnakr78yrwlaihzgr5s1wmfjvf6knf";
     };
 
     buildInputs = [ perl ];
@@ -39,7 +39,7 @@ let
       description = "VT220/xterm/ECMA-48 terminal emulator library";
       homepage = http://www.leonerd.org.uk/code/libvterm/;
       license = licenses.mit;
-      maintainers = with maintainers; [ nckx ];
+      maintainers = with maintainers; [ nckx garbas ];
       platforms = platforms.unix;
     };
   };
@@ -60,31 +60,29 @@ let
 
   neovim = stdenv.mkDerivation rec {
     name = "neovim-${version}";
-    version = "0.1.2";
+    version = "0.1.6";
 
     src = fetchFromGitHub {
-      sha256 = "128aznp2gj08bdz05ri8mqday7wcsy9yz7dw7vdgzk0pk23vjz89";
-      rev = "v${version}";
-      repo = "neovim";
       owner = "neovim";
+      repo = "neovim";
+      rev = "v${version}";
+      sha256 = "0s8vqf4aym1d1h8yi0znpqw5rv9v3z64y5aha9dmynbwxa58q7pp";
     };
 
     enableParallelBuilding = true;
 
     buildInputs = [
-      glib
       libtermkey
       libuv
-      luajit
-      lua
-      lpeg
-      luaMessagePack
-      luabitop
       libmsgpack
       ncurses
       neovimLibvterm
       unibilium
-    ] ++ optional withJemalloc jemalloc;
+      luajit
+      luaPackages.lua
+      gperf
+    ] ++ optional withJemalloc jemalloc
+      ++ lualibs;
 
     nativeBuildInputs = [
       cmake
@@ -93,10 +91,22 @@ let
       pkgconfig
     ];
 
-    LUA_CPATH="${lpeg}/lib/lua/${lua.luaversion}/?.so;${luabitop}/lib/lua/5.2/?.so";
-    LUA_PATH="${luaMessagePack}/share/lua/5.1/?.lua";
+    LUA_PATH = stdenv.lib.concatStringsSep ";" (map luaPackages.getLuaPath lualibs);
+    LUA_CPATH = stdenv.lib.concatStringsSep ";" (map luaPackages.getLuaCPath lualibs);
 
-    preConfigure = stdenv.lib.optionalString stdenv.isDarwin ''
+    lualibs = [ luaPackages.mpack luaPackages.lpeg luaPackages.luabitop ];
+
+    cmakeFlags = [
+      "-DLUA_PRG=${luaPackages.lua}/bin/lua"
+    ];
+
+    # triggers on buffer overflow bug while running tests
+    hardeningDisable = [ "fortify" ];
+
+    preConfigure = ''
+      substituteInPlace runtime/autoload/man.vim \
+        --replace /usr/bin/man ${man}/bin/man
+    '' + stdenv.lib.optionalString stdenv.isDarwin ''
       export DYLD_LIBRARY_PATH=${jemalloc}/lib
       substituteInPlace src/nvim/CMakeLists.txt --replace "    util" ""
     '';
@@ -106,6 +116,7 @@ let
       install_name_tool -change libjemalloc.1.dylib \
                 ${jemalloc}/lib/libjemalloc.1.dylib \
                 $out/bin/nvim
+      sed -i -e "s|'xsel|'${xsel}/bin/xsel|" $out/share/nvim/runtime/autoload/provider/clipboard.vim
     '' + optionalString withPython ''
       ln -s ${pythonEnv}/bin/python $out/bin/nvim-python
     '' + optionalString withPyGUI ''
@@ -132,14 +143,14 @@ let
           modifications to the core source
         - Improve extensibility with a new plugin architecture
       '';
-      homepage    = http://www.neovim.io;
+      homepage    = https://www.neovim.io;
       # "Contributions committed before b17d96 by authors who did not sign the
       # Contributor License Agreement (CLA) remain under the Vim license.
       # Contributions committed after b17d96 are licensed under Apache 2.0 unless
       # those contributions were copied from Vim (identified in the commit logs
       # by the vim-patch token). See LICENSE for details."
       license = with licenses; [ asl20 vim ];
-      maintainers = with maintainers; [ manveru nckx garbas ];
+      maintainers = with maintainers; [ manveru garbas ];
       platforms   = platforms.unix;
     };
   };

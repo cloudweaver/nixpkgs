@@ -17,6 +17,10 @@ let
       what = "${pkgs.mongodb}/bin";
       where = "${stateDir}/bin";
     }
+    {
+      what = "${cfg.dataDir}";
+      where = "${stateDir}/data";
+    }
   ];
   systemdMountPoints = map (m: "${utils.escapeSystemdPath m.where}.mount") mountPoints;
 in
@@ -32,6 +36,28 @@ in
       '';
     };
 
+    services.unifi.dataDir = mkOption {
+      type = types.str;
+      default = "${stateDir}/data";
+      description = ''
+        Where to store the database and other data.
+
+        This directory will be bind-mounted to ${stateDir}/data as part of the service startup.
+      '';
+    };
+
+    services.unifi.openPorts = mkOption {
+      type = types.bool;
+      default = true;
+      description = ''
+        Whether or not to open the minimum required ports on the firewall.
+
+        This is necessary to allow firmware upgrades and device discovery to
+        work. For remote login, you should additionally open (or forward) port
+        8443.
+      '';
+    };
+
   };
 
   config = mkIf cfg.enable {
@@ -40,6 +66,19 @@ in
       uid = config.ids.uids.unifi;
       description = "UniFi controller daemon user";
       home = "${stateDir}";
+    };
+
+    networking.firewall = mkIf cfg.openPorts {
+      # https://help.ubnt.com/hc/en-us/articles/204910084-UniFi-Change-Default-Ports-for-Controller-and-UAPs
+      allowedTCPPorts = [
+        8080  # Port for UAP to inform controller.
+        8880  # Port for HTTP portal redirect, if guest portal is enabled.
+        8843  # Port for HTTPS portal redirect, ditto.
+      ];
+      allowedUDPPorts = [
+        3478  # UDP port used for STUN.
+        10001 # UDP port used for device discovery.
+      ];
     };
 
     # We must create the binary directories as bind mounts instead of symlinks
@@ -62,12 +101,12 @@ in
       bindsTo = systemdMountPoints;
       unitConfig.RequiresMountsFor = stateDir;
       # This a HACK to fix missing dependencies of dynamic libs extracted from jars
-      environment.LD_LIBRARY_PATH = with pkgs.stdenv; "${cc.cc}/lib";
+      environment.LD_LIBRARY_PATH = with pkgs.stdenv; "${cc.cc.lib}/lib";
 
       preStart = ''
-        # Ensure privacy of state
-        chown unifi "${stateDir}"
-        chmod 0700 "${stateDir}"
+        # Ensure privacy of state and data.
+        chown unifi "${stateDir}" "${stateDir}/data"
+        chmod 0700 "${stateDir}" "${stateDir}/data"
 
         # Create the volatile webapps
         rm -rf "${stateDir}/webapps"

@@ -24,7 +24,7 @@ rec {
   sheevaplug = {
     name = "sheevaplug";
     kernelMajor = "2.6";
-    kernelHeadersBaseConfig = "kirkwood_defconfig";
+    kernelHeadersBaseConfig = "multi_v5_defconfig";
     kernelBaseConfig = "multi_v5_defconfig";
     kernelArch = "arm";
     kernelAutoModules = false;
@@ -86,6 +86,10 @@ rec {
         ZRAM m
         NETCONSOLE m
 
+        # Disable OABI to have seccomp_filter (required for systemd)
+        # https://github.com/raspberrypi/firmware/issues/651
+        OABI_COMPAT n
+
         # Fail to build
         DRM n
         SCSI_ADVANSYS n
@@ -129,6 +133,10 @@ rec {
     # Only for uboot = uboot :
     ubootConfig = "sheevaplug_config";
     kernelDTB = true; # Beyond 3.10
+    gcc = {
+      arch = "armv5te";
+      float = "soft";
+    };
   };
 
   raspberrypi = {
@@ -136,6 +144,7 @@ rec {
     kernelMajor = "2.6";
     kernelHeadersBaseConfig = "bcm2835_defconfig";
     kernelBaseConfig = "bcmrpi_defconfig";
+    kernelDTB = true;
     kernelArch = "arm";
     kernelAutoModules = false;
     kernelExtraConfig =
@@ -181,6 +190,10 @@ rec {
         CIFS_ACL y
 
         ZRAM m
+
+        # Disable OABI to have seccomp_filter (required for systemd)
+        # https://github.com/raspberrypi/firmware/issues/651
+        OABI_COMPAT n
 
         # Fail to build
         DRM n
@@ -262,6 +275,10 @@ rec {
         CIFS_ACL y
 
         ZRAM m
+
+        # Disable OABI to have seccomp_filter (required for systemd)
+        # https://github.com/raspberrypi/firmware/issues/651
+        OABI_COMPAT n
 
         # Fail to build
         DRM n
@@ -397,9 +414,11 @@ rec {
     kernelArch = "arm";
     kernelDTB = true;
     kernelAutoModules = false;
-    kernelExtraConfig = "";
     uboot = null;
     kernelTarget = "zImage";
+    kernelExtraConfig = ''
+      AHCI_IMX y
+    '';
     gcc = {
       # Some table about fpu flags:
       # http://community.arm.com/servlet/JiveServlet/showImage/38-1981-3827/blogentry-103749-004812900+1365712953_thumb.png
@@ -410,11 +429,12 @@ rec {
       # Cortex-A15: -mfpu=neon-vfpv4
 
       # More about FPU:
-       #https://wiki.debian.org/ArmHardFloatPort/VfpComparison
+      # https://wiki.debian.org/ArmHardFloatPort/VfpComparison
 
-      # We try to be compatible with beaglebone by now
+      # vfpv3-d16 is what Debian uses and seems to be the best compromise: NEON is not supported in e.g. Scaleway or Tegra 2,
+      # and the above page suggests NEON is only an improvement with hand-written assembly.
       arch = "armv7-a";
-      fpu = "neon";
+      fpu = "vfpv3-d16";
       float = "hard";
 
       # For Raspberry Pi the 2 the best would be:

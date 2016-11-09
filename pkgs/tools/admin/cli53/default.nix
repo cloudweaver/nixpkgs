@@ -1,16 +1,15 @@
-{ lib, buildPythonApplication, pythonPackages, fetchurl }:
+{ lib, python2Packages, fetchurl }:
 
-buildPythonApplication rec {
+python2Packages.buildPythonApplication rec {
   name = "cli53-${version}";
-  namePrefix = "";  # Suppress "python27-" name prefix
   version = "0.4.4";
 
   src = fetchurl {
-    url = "https://pypi.python.org/packages/source/c/cli53/${name}.tar.gz";
+    url = "mirror://pypi/c/cli53/${name}.tar.gz";
     sha256 = "0s9jzigq6a16m2c3qklssx2lz16cf13g5zh80vh24kxazaxqzbig";
   };
 
-  propagatedBuildInputs = with pythonPackages; [
+  propagatedBuildInputs = with python2Packages; [
     argparse
     boto
     dns

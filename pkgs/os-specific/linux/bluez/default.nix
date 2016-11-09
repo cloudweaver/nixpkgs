@@ -1,14 +1,13 @@
-{ stdenv, fetchurl, pkgconfig, dbus, glib, libusb, alsaLib, python, makeWrapper
-, pythonDBus, pygobject, readline, libsndfile }:
+{ stdenv, fetchurl, pkgconfig, dbus, glib, libusb, alsaLib, pythonPackages, makeWrapper
+, readline, libsndfile }:
 
 assert stdenv.isLinux;
 
 let
-  pythonpath = "${pythonDBus}/lib/${python.libPrefix}/site-packages:"
-    + "${pygobject}/lib/${python.libPrefix}/site-packages";
-in
-   
-stdenv.mkDerivation rec {
+  inherit (pythonPackages) python;
+  pythonpath = "${pythonPackages.dbus}/lib/${python.libPrefix}/site-packages:"
+    + "${pythonPackages.pygobject}/lib/${python.libPrefix}/site-packages";
+in stdenv.mkDerivation rec {
   name = "bluez-4.101";
    
   src = fetchurl {
@@ -17,7 +16,7 @@ stdenv.mkDerivation rec {
   };
 
   buildInputs =
-    [ pkgconfig dbus.libs glib libusb alsaLib python makeWrapper
+    [ pkgconfig dbus glib libusb alsaLib python makeWrapper
       readline libsndfile
       # Disables GStreamer; not clear what it gains us other than a
       # zillion extra dependencies.
@@ -49,5 +48,6 @@ stdenv.mkDerivation rec {
   meta = {
     homepage = http://www.bluez.org/;
     description = "Bluetooth support for Linux";
+    platforms = stdenv.lib.platforms.linux;
   };
 }

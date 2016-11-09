@@ -1,4 +1,4 @@
-{ stdenv, fetchurl, autoconf, automake }:
+{ stdenv, fetchurl, autoconf, automake, libiconv }:
 
 stdenv.mkDerivation rec {
   name = "unrtf-${version}";
@@ -9,9 +9,14 @@ stdenv.mkDerivation rec {
     sha256 = "1pcdzf2h1prn393dkvg93v80vh38q0v817xnbwrlwxbdz4k7i8r2";
   };
 
-  buildInputs = [ autoconf automake ];
+  nativeBuildInputs = [ autoconf automake ];
+
+  buildInputs = [ ] ++ stdenv.lib.optional stdenv.isDarwin libiconv;
+  NIX_LDFLAGS = stdenv.lib.optionalString stdenv.isDarwin "-liconv";
 
   preConfigure = "./bootstrap";
+
+  outputs = [ "out" "man" ];
 
   meta = with stdenv.lib; {
     description = "A converter from Rich Text Format to other formats";

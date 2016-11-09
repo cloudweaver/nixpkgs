@@ -1,6 +1,6 @@
 { stdenv, fetchurl, makeWrapper, makeDesktopItem, zlib, glib, libpng, freetype
 , xorg, fontconfig, qtbase, xkeyboard_config, alsaLib, libpulseaudio ? null
-, libredirect, quazip, less, which, unzip
+, libredirect, quazip, less, which, unzip, llvmPackages
 }:
 
 let
@@ -13,6 +13,7 @@ let
     [ zlib glib libpng freetype xorg.libSM xorg.libICE xorg.libXrender
       xorg.libXrandr xorg.libXfixes xorg.libXcursor xorg.libXinerama
       xorg.libxcb fontconfig xorg.libXext xorg.libX11 alsaLib qtbase libpulseaudio
+      llvmPackages.libcxx llvmPackages.libcxxabi
     ];
 
   desktopItem = makeDesktopItem {
@@ -30,7 +31,7 @@ in
 stdenv.mkDerivation rec {
   name = "teamspeak-client-${version}";
 
-  version = "3.0.18.2";
+  version = "3.0.19.4";
 
   src = fetchurl {
     urls = [
@@ -38,14 +39,14 @@ stdenv.mkDerivation rec {
       "http://teamspeak.gameserver.gamed.de/ts3/releases/${version}/TeamSpeak3-Client-linux_${arch}-${version}.run"
     ];
     sha256 = if stdenv.is64bit
-                then "1r0l0jlng1fz0cyvnfa4hqwlszfraj5kcs2lg9qnqvp03x8sqn6h"
-                else "1pgpsv1r216l76fx0grlqmldd9gha3sj84gnm44km8y98b3hj525";
+                then "f74617d2a2f5cb78e0ead345e6ee66c93e4a251355779018fd060828e212294a"
+                else "e11467dc1732ddc21ec0d86c2853c322af7a6b8307e3e8dfebc6b4b4d7404841";
   };
 
   # grab the plugin sdk for the desktop icon
   pluginsdk = fetchurl {
-    url = "http://dl.4players.de/ts/client/pluginsdk/pluginsdk_3.0.18.1.zip";
-    sha256 = "108y52mfg44cnnhhipnmrr0cxh7ram5c2hnchxjkwvf5766vbaq4";
+    url = "http://dl.4players.de/ts/client/pluginsdk/pluginsdk_3.0.19.1.zip";
+    sha256 = "1r1ss6zq5axr7h82inlp98zaz50041rizli5bwz3lfyipfr034ya";
   };
 
   buildInputs = [ makeWrapper less which unzip ];
@@ -100,7 +101,11 @@ stdenv.mkDerivation rec {
   meta = {
     description = "The TeamSpeak voice communication tool";
     homepage = http://teamspeak.com/;
-    license = "http://www.teamspeak.com/?page=downloads&type=ts3_linux_client_latest";
+    license = {
+      fullName = "Teamspeak client license";
+      url = http://sales.teamspeakusa.com/licensing.php;
+      free = false;
+    };
     maintainers = [ stdenv.lib.maintainers.lhvwb ];
     platforms = stdenv.lib.platforms.linux;
   };

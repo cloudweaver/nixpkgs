@@ -93,7 +93,7 @@ let
             echo "stripping FHS paths in \`$mf'..."
             sed -i "$mf" -e 's|/usr/bin/||g ; s|/bin/||g ; s|/sbin/||g'
         done
-        sed -i Makefile -e 's|= depmod|= ${kmod}/sbin/depmod|'
+        sed -i Makefile -e 's|= depmod|= ${kmod}/bin/depmod|'
       '';
 
       configurePhase = ''
@@ -109,6 +109,7 @@ let
       buildFlags = [
         "KBUILD_BUILD_VERSION=1-NixOS"
         platform.kernelTarget
+        "vmlinux"  # for "perf" and things like that
       ] ++ optional isModular "modules";
 
       installFlags = [
@@ -122,10 +123,13 @@ let
                           if platform.kernelTarget == "zImage" then "zinstall" else
                           "install") ];
 
-      postInstall = (optionalString installsFirmware ''
+      postInstall = ''
+        mkdir -p $dev
+        cp $buildRoot/vmlinux $dev/
+      '' + (optionalString installsFirmware ''
         mkdir -p $out/lib/firmware
       '') + (if (platform ? kernelDTB && platform.kernelDTB) then ''
- 	make $makeFlags "''${makeFlagsArray[@]}" dtbs
+        make $makeFlags "''${makeFlagsArray[@]}" dtbs
         mkdir -p $out/dtbs
         cp $buildRoot/arch/$karch/boot/dts/*.dtb $out/dtbs
       '' else "") + (if isModular then ''
@@ -184,20 +188,13 @@ let
         find -empty -type d -delete
 
         # Remove reference to kmod
-        sed -i Makefile -e 's|= ${kmod}/sbin/depmod|= depmod|'
+        sed -i Makefile -e 's|= ${kmod}/bin/depmod|= depmod|'
       '' else optionalString installsFirmware ''
         make firmware_install $makeFlags "''${makeFlagsArray[@]}" \
           $installFlags "''${installFlagsArray[@]}"
       '');
 
-      # !!! This leaves references to gcc in $dev
-      # that we might be able to avoid
-      postFixup = if isModular then ''
-        # !!! Should this be part of stdenv? Also patchELF should take an argument...
-        prefix=$dev
-        patchELF
-        prefix=$out
-      '' else null;
+      requiredSystemFeatures = [ "big-parallel" ];
 
       meta = {
         description =
@@ -224,6 +221,8 @@ stdenv.mkDerivation ((drvAttrs config stdenv.platform (kernelPatches ++ nativeKe
 
   nativeBuildInputs = [ perl bc nettools openssl ] ++ optional (stdenv.platform.uboot != null)
     (ubootChooser stdenv.platform.uboot);
+
+  hardeningDisable = [ "bindnow" "format" "fortify" "stackprotector" "pic" ];
 
   makeFlags = commonMakeFlags ++ [
     "ARCH=${stdenv.platform.kernelArch}"

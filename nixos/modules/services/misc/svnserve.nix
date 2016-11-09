@@ -35,10 +35,10 @@ in
 
   config = mkIf cfg.enable {
     systemd.services.svnserve = {
-      after = [ "network-interfaces.target" ];
+      after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
       preStart = "mkdir -p ${cfg.svnBaseDir}";
-      script = "${pkgs.subversion}/bin/svnserve -r ${cfg.svnBaseDir} -d --foreground --pid-file=/var/run/svnserve.pid";
+      script = "${pkgs.subversion.out}/bin/svnserve -r ${cfg.svnBaseDir} -d --foreground --pid-file=/var/run/svnserve.pid";
     };
   };
 }

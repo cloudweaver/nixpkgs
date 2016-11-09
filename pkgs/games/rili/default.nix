@@ -10,7 +10,7 @@ stdenv.mkDerivation {
 
   patches = [ ./moderinze_cpp.patch ];
 
-  CPPFLAGS = "-I${SDL}/include -I${SDL}/include/SDL -I${SDL_mixer}/include";
+  CPPFLAGS = "-I${SDL.dev}/include -I${SDL.dev}/include/SDL -I${SDL_mixer}/include";
 
   buildInputs = [ SDL SDL_mixer autoreconfHook ];
 
@@ -24,5 +24,6 @@ You drive a toy wood engine in many levels and you must collect all the coaches
 to win.
     '';
     maintainers = with stdenv.lib.maintainers; [ jcumming ];
+    platforms = with stdenv.lib.platforms; linux;
   };
 }

@@ -3,10 +3,10 @@
 
 stdenv.mkDerivation rec {
   name = "bobcat-${version}";
-  version = "4.00.00";
+  version = "4.03.00";
 
   src = fetchFromGitHub {
-    sha256 = "0wdb25sgw7i3jk3lbja6b4ipqfg1sncam6adg2bn8l5fcinrpwgs";
+    sha256 = "0jkwq3f6g3vbim2jg5wfzhin89r4crnypqggp8cqimjmpkyfqnv0";
     rev = version;
     repo = "bobcat";
     owner = "fbb-git";
@@ -19,7 +19,7 @@ stdenv.mkDerivation rec {
 
   postPatch = ''
     substituteInPlace INSTALL.im --replace /usr $out
-    patchShebangs ./build
+    patchShebangs .
   '';
 
   buildPhase = ''
@@ -28,7 +28,7 @@ stdenv.mkDerivation rec {
   '';
 
   installPhase = ''
-    ./build install
+    ./build install x
   '';
 
   meta = with stdenv.lib; {

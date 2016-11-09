@@ -34,14 +34,16 @@
 
 stdenv.mkDerivation rec {
   name = "${if libOnly then "lib" else ""}pulseaudio-${version}";
-  version = "8.0";
+  version = "9.0";
 
   src = fetchurl {
     url = "http://freedesktop.org/software/pulseaudio/releases/pulseaudio-${version}.tar.xz";
-    sha256 = "128rrlvrgb4ia3pbzipf5mi6nvrpm6zmxn5r3bynqiikhvify3k9";
+    sha256 = "11j682g2mn723sz3bh4i44ggq29z053zcggy0glzn63zh9mxdly3";
   };
 
   patches = [ ./caps-fix.patch ];
+
+  outputs = [ "out" "dev" ];
 
   nativeBuildInputs = [ pkgconfig intltool autoreconfHook ];
 
@@ -50,7 +52,7 @@ stdenv.mkDerivation rec {
 
   buildInputs =
     [ json_c libsndfile speexdsp fftwFloat ]
-    ++ lib.optionals stdenv.isLinux [ glib dbus.libs ]
+    ++ lib.optionals stdenv.isLinux [ glib dbus ]
     ++ lib.optionals (!libOnly) (
       [ libasyncns webrtc-audio-processing ]
       ++ lib.optional jackaudioSupport libjack2
@@ -110,8 +112,9 @@ stdenv.mkDerivation rec {
 
   postInstall = lib.optionalString libOnly ''
     rm -rf $out/{bin,share,etc,lib/{pulse-*,systemd}}
-    sed 's|-lltdl|-L${libtool}/lib -lltdl|' -i $out/lib/pulseaudio/libpulsecore-${version}.la
-  '';
+    sed 's|-lltdl|-L${libtool.lib}/lib -lltdl|' -i $out/lib/pulseaudio/libpulsecore-${version}.la
+  ''
+    + ''moveToOutput lib/cmake "$dev" '';
 
   meta = {
     description = "Sound server for POSIX and Win32 systems";

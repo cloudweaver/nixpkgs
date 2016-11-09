@@ -7,13 +7,13 @@
 
 stdenv.mkDerivation rec {
   name = "aws-sdk-cpp-${version}";
-  version = "0.9.6";
+  version = "0.10.6";
 
   src = fetchFromGitHub {
     owner = "awslabs";
     repo = "aws-sdk-cpp";
     rev = version;
-    sha256 = "022v7naa5vjvq3wfn4mcp99li61ffsk2fnc8qqi52cb1pyxz9sk1";
+    sha256 = "1x3xam7vprlld6iqhqgdhgmqyclfy8dvzgy3375cijy9akhvv67i";
   };
 
   buildInputs = [ cmake curl ];
@@ -22,6 +22,10 @@ stdenv.mkDerivation rec {
     lib.optional (!customMemoryManagement) "-DCUSTOM_MEMORY_MANAGEMENT=0"
     ++ lib.optional (apis != ["*"])
       "-DBUILD_ONLY=${lib.concatMapStringsSep ";" (api: "aws-cpp-sdk-" + api) apis}";
+
+  # curl upgrade to 7.50.0 (#17152) changes the libcurl headers slightly and
+  # therefore requires the followin flag until this package gets updated
+  NIX_CFLAGS_COMPILE = [ "-fpermissive" ];
 
   enableParallelBuilding = true;
 

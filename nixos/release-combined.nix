@@ -44,11 +44,11 @@ in rec {
         (all nixos.manual)
 
         (all nixos.iso_minimal)
-        (all nixos.iso_graphical)
-        (all nixos.ova)
+        nixos.iso_graphical.x86_64-linux
+        nixos.ova.x86_64-linux
 
         #(all nixos.tests.containers)
-        (all nixos.tests.chromium)
+        nixos.tests.chromium
         (all nixos.tests.firefox)
         (all nixos.tests.firewall)
         nixos.tests.gnome3.x86_64-linux # FIXME: i686-linux
@@ -63,9 +63,17 @@ in rec {
         (all nixos.tests.installer.btrfsSimple)
         (all nixos.tests.installer.btrfsSubvols)
         (all nixos.tests.installer.btrfsSubvolDefault)
-        (all nixos.tests.bootBiosCdrom)
+        (all nixos.tests.boot.biosCdrom)
+        #(all nixos.tests.boot.biosUsb) # disabled due to issue #15690
+        (all nixos.tests.boot.uefiCdrom)
+        (all nixos.tests.boot.uefiUsb)
+        (all nixos.tests.boot-stage1)
+        (all nixos.tests.hibernate)
+        (all nixos.tests.ecryptfs)
         (all nixos.tests.ipv6)
+        (all nixos.tests.i3wm)
         (all nixos.tests.kde4)
+        (all nixos.tests.kde5)
         #(all nixos.tests.lightdm)
         (all nixos.tests.login)
         (all nixos.tests.misc)
@@ -81,6 +89,7 @@ in rec {
         (all nixos.tests.networking.scripted.sit)
         (all nixos.tests.networking.scripted.vlan)
         (all nixos.tests.nfs3)
+        (all nixos.tests.nfs4)
         (all nixos.tests.openssh)
         (all nixos.tests.printing)
         (all nixos.tests.proxy)

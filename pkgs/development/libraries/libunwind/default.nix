@@ -20,9 +20,10 @@ stdenv.mkDerivation rec {
     sed -i -e '/LIBLZMA/s:-lzma:-llzma:' configure
   '';
 
+  outputs = [ "out" "dev" ];
+
   propagatedBuildInputs = [ xz ];
 
-  NIX_CFLAGS_COMPILE = if stdenv.system == "x86_64-linux" then "-fPIC" else "";
   preInstall = ''
     mkdir -p "$out/lib"
     touch "$out/lib/libunwind-generic.so"
@@ -30,7 +31,7 @@ stdenv.mkDerivation rec {
 
   postInstall = ''
     find $out -name \*.la | while read file; do
-      sed -i 's,-llzma,${xz}/lib/liblzma.la,' $file
+      sed -i 's,-llzma,${xz.out}/lib/liblzma.la,' $file
     done
   '';
 

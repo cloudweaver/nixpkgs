@@ -1,7 +1,7 @@
 #! @shell@ -e
 path_backup="$PATH"
-if [ -n "@coreutils@" ]; then
-  PATH="@coreutils@/bin"
+if [ -n "@coreutils_bin@" ]; then
+  PATH="@coreutils_bin@/bin"
 fi
 
 if [ -n "$NIX_LD_WRAPPER_START_HOOK" ]; then
@@ -16,7 +16,7 @@ source @out@/nix-support/utils.sh
 
 
 # Optionally filter out paths not refering to the store.
-params=("$@")
+expandResponseParams "$@"
 if [ "$NIX_ENFORCE_PURITY" = 1 -a -n "$NIX_STORE" \
         -a \( -z "$NIX_IGNORE_LD_THROUGH_GCC" -o -z "$NIX_LDFLAGS_SET" \) ]; then
     rest=()
@@ -47,8 +47,10 @@ if [ "$NIX_ENFORCE_PURITY" = 1 -a -n "$NIX_STORE" \
     params=("${rest[@]}")
 fi
 
+LD=@prog@
+source @out@/nix-support/add-hardening.sh
 
-extra=()
+extra=(${hardeningLDFlags[@]})
 extraBefore=()
 
 if [ -z "$NIX_LDFLAGS_SET" ]; then
@@ -56,7 +58,7 @@ if [ -z "$NIX_LDFLAGS_SET" ]; then
     extraBefore+=($NIX_LDFLAGS_BEFORE)
 fi
 
-extra+=($NIX_LDFLAGS_AFTER)
+extra+=($NIX_LDFLAGS_AFTER $NIX_LDFLAGS_HARDEN)
 
 
 # Add all used dynamic libraries to the rpath.
@@ -146,8 +148,23 @@ if [ "$NIX_DONT_SET_RPATH" != 1 ]; then
 
     # Finally, add `-rpath' switches.
     for i in $rpath; do
-        extra=(${extra[@]} -rpath $i)
+        extra+=(-rpath $i)
     done
+fi
+
+
+# Only add --build-id if this is a final link. FIXME: should build gcc
+# with --enable-linker-build-id instead?
+if [ "$NIX_SET_BUILD_ID" = 1 ]; then
+    for p in "${params[@]}"; do
+        if [ "$p" = "-r" -o "$p" = "--relocatable" -o "$p" = "-i" ]; then
+            relocatable=1
+            break
+        fi
+    done
+    if [ -z "$relocatable" ]; then
+        extra+=(--build-id)
+    fi
 fi
 
 

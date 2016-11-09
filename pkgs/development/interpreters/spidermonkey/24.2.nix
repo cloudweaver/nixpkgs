@@ -1,17 +1,19 @@
-{ stdenv, fetchurl, pkgconfig, nspr, perl, python, zip, libffi, readline }:
+{ stdenv, fetchurl, pkgconfig, nspr, perl, python2, zip, libffi, readline }:
 
 stdenv.mkDerivation rec {
   version = "24.2.0";
   name = "spidermonkey-${version}";
 
   src = fetchurl {
-    url = "http://ftp.mozilla.org/pub/mozilla.org/js/mozjs-${version}.tar.bz2";
+    url = "mirror://mozilla/js/mozjs-${version}.tar.bz2";
     sha256 = "1n1phk8r3l8icqrrap4czplnylawa0ddc2cc4cgdz46x3lrkybz6";
   };
 
+  outputs = [ "out" "dev" "lib" ];
+
   propagatedBuildInputs = [ nspr ];
 
-  buildInputs = [ pkgconfig perl python zip libffi readline ];
+  buildInputs = [ pkgconfig perl python2 zip libffi readline ];
 
   postPatch = ''
     # Fixes an issue with version detection under perl 5.22.x
@@ -21,11 +23,14 @@ stdenv.mkDerivation rec {
   postUnpack = "sourceRoot=\${sourceRoot}/js/src";
 
   preConfigure = ''
-    export NIX_CFLAGS_COMPILE="$NIX_CFLAGS_COMPILE -I${nspr}/include/nspr"
+    export NIX_CFLAGS_COMPILE="$NIX_CFLAGS_COMPILE -I${nspr.dev}/include/nspr"
     export LIBXUL_DIST=$out
   '';
 
+  setOutputFlags = false;
   configureFlags = [
+    "--libdir=$(lib)/lib"
+    "--includedir=$(dev)/include"
     "--enable-threadsafe"
     "--with-system-nspr"
     "--with-system-ffi"
@@ -40,11 +45,17 @@ stdenv.mkDerivation rec {
   doCheck = true;
   preCheck = "rm jit-test/tests/sunspider/check-date-format-tofte.js"; # https://bugzil.la/600522
 
+  postInstall = ''
+    rm "$lib"/lib/*.a # halve the output size
+    moveToOutput "bin/js*-config" "$dev" # break the cycle
+  '';
+
   meta = with stdenv.lib; {
     description = "Mozilla's JavaScript engine written in C/C++";
     homepage = https://developer.mozilla.org/en/SpiderMonkey;
     # TODO: MPL/GPL/LGPL tri-license.
     maintainers = [ maintainers.goibhniu ];
+    platforms = platforms.linux;
   };
 }
 

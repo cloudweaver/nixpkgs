@@ -5,13 +5,16 @@ let
   callPackage_i686 = pkgsi686Linux.newScope self;
 
   self = rec {
-    dwarf-fortress-original = callPackage_i686 ./game.nix { };
+    dwarf-fortress-original = callPackage ./game.nix { };
 
     dfhack = callPackage_i686 ./dfhack {
       inherit (pkgsi686Linux.perlPackages) XMLLibXML XMLLibXSLT;
+      protobuf = with pkgsi686Linux; protobuf.override {
+        stdenv = overrideInStdenv stdenv [ useOldCXXAbi ];
+      };
     };
 
-    dwarf-fortress-unfuck = callPackage_i686 ./unfuck.nix { };
+    dwarf-fortress-unfuck = callPackage ./unfuck.nix { };
 
     dwarf-fortress = callPackage ./wrapper {
       themes = {
@@ -20,7 +23,7 @@ let
       };
     };
 
-    dwarf-therapist-original = callPackage ./dwarf-therapist {
+    dwarf-therapist-original = pkgs.qt5.callPackage ./dwarf-therapist {
       texlive = pkgs.texlive.combine {
         inherit (pkgs.texlive) scheme-basic float caption wrapfig adjmulticol sidecap preprint enumitem;
       };

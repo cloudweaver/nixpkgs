@@ -1,7 +1,6 @@
-{ stdenv, fetchurl, qtbase, qtsvg, boost }:
+{ stdenv, fetchurl, qtbase, qtsvg, qmakeHook, boost }:
 
 stdenv.mkDerivation rec {
-
   version = "0.9.0b";
   name = "fritzing-${version}";
 
@@ -14,12 +13,12 @@ stdenv.mkDerivation rec {
     tar xjf ${src}
   '';
 
-  buildInputs = [ qtbase qtsvg boost ];
+  buildInputs = [ qtbase qtsvg boost qmakeHook ];
 
-  configurePhase = ''
+  qmakeFlags = [ "phoenix.pro" ];
+
+  preConfigure = ''
     cd fritzing-${version}.source
-    echo $PATH
-    qmake PREFIX=$out phoenix.pro
   '';
 
   meta = {
@@ -27,5 +26,6 @@ stdenv.mkDerivation rec {
     homepage = http://fritzing.org/;
     license = stdenv.lib.licenses.gpl3;
     maintainers = [ stdenv.lib.maintainers.robberer ];
-  }; 
+    platforms = stdenv.lib.platforms.linux;
+  };
 }

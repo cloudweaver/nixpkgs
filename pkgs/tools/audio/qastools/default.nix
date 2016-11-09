@@ -1,24 +1,25 @@
-{ stdenv, fetchurl, cmake, alsaLib, udev, qt }:
+{ stdenv, fetchurl, cmake, alsaLib, udev, qtbase,
+  qtsvg, qttools, makeQtWrapper }:
 
 let
-  version = "0.18.1";
+  version = "0.21.0";
 in
 
 stdenv.mkDerivation {
   name = "qastools-${version}";
 
   src = fetchurl {
-    url = "mirror://sourceforge/qastools/qastools_${version}.tar.bz2";
-    sha256 = "1sac6a0j1881wgpv4491b2f4jnhqkab6xyldmcg1wfqb5qkdgzvg";
+    url = "mirror://sourceforge/project/qastools/${version}/qastools_${version}.tar.bz2";
+    sha256 = "1zl9cn5h43n63yp3z1an87xvw554k9hlcz75ddb30lvpcczkmwrh";
   };
 
   buildInputs = [
-    cmake alsaLib udev qt
+    cmake alsaLib udev qtbase qtsvg qttools makeQtWrapper
   ];
 
   cmakeFlags = [
     "-DCMAKE_INSALL_PREFIX=$out"
-    "-DALSA_INCLUDE=${alsaLib}/include/alsa/version.h"
+    "-DALSA_INCLUDE=${alsaLib.dev}/include/alsa/version.h"
   ];
 
   meta = with stdenv.lib; {

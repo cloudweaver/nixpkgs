@@ -2,11 +2,11 @@
 
 stdenv.mkDerivation rec {
   name = "unifont_upper-${version}";
-  version = "8.0.01";
+  version = "9.0.03";
 
   ttf = fetchurl {
-    url = "http://unifoundry.com/pub/unifont-8.0.01/font-builds/${name}.ttf";
-    sha256 = "0ffqm85bk345pnql1x0rbg0z31472y844xibb27njjg4avb21lga";
+    url = "http://unifoundry.com/pub/unifont-${version}/font-builds/${name}.ttf";
+    sha256 = "015v39y6nnyz4ld006349jzk9isyaqp4cnvmz005ylfnicl4zwhi";
   };
 
   phases = "installPhase";
@@ -23,7 +23,7 @@ stdenv.mkDerivation rec {
 
     # Basically GPL2+ with font exception.
     license = http://unifoundry.com/LICENSE.txt;
-    maintainers = [ maintainers.mathnerd314 ];
+    maintainers = [ maintainers.mathnerd314 maintainers.vrthra ];
     platforms = platforms.all;
   };
 }

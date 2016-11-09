@@ -1,13 +1,18 @@
 { stdenv, fetchFromGitHub }:
 
-stdenv.mkDerivation {
-  name = "android-udev-rules-20151209";
+## Usage
+# In NixOS, simply add this package to services.udev.packages:
+#   services.udev.packages = [ pkgs.android-udev-rules ];
+
+stdenv.mkDerivation rec {
+  name = "android-udev-rules-${version}";
+  version = "20161014";
 
   src = fetchFromGitHub {
     owner = "M0Rf30";
     repo = "android-udev-rules";
-    rev = "b22717d2337f991787ab687f6d0258207c6ad288";
-    sha256 = "1z03nlqj68bxs163jmn66j3n0ywwar5bihpsz5ag8ak3nn2d3fp2";
+    rev = version;
+    sha256 = "0xc7wslxf7xsvfbd83wsw4nikmpq1zfd607y2p2r3j1vkw1yak08";
   };
 
   installPhase = ''
@@ -15,7 +20,7 @@ stdenv.mkDerivation {
   '';
 
   meta = with stdenv.lib; {
-    homepage = https://github.com/M0Rf30/android-udev-rules;
+    homepage = "https://github.com/M0Rf30/android-udev-rules";
     description = "Android udev rules list aimed to be the most comprehensive on the net";
     platforms = platforms.linux;
     license = licenses.gpl3;

@@ -23,7 +23,7 @@ in
 
           postVM =
             ''
-              PATH=$PATH:${pkgs.gnutar}/bin:${pkgs.gzip}/bin
+              PATH=$PATH:${stdenv.lib.makeBinPath [ pkgs.gnutar pkgs.gzip ]}
               pushd $out
               mv $diskImageBase disk.raw
               tar -Szcf $diskImageBase.tar.gz disk.raw
@@ -66,10 +66,10 @@ in
 
           # Register the paths in the Nix database.
           printRegistration=1 perl ${pkgs.pathsFromGraph} /tmp/xchg/closure | \
-              chroot /mnt ${config.nix.package}/bin/nix-store --load-db --option build-users-group ""
+              chroot /mnt ${config.nix.package.out}/bin/nix-store --load-db --option build-users-group ""
 
           # Create the system profile to allow nixos-rebuild to work.
-          chroot /mnt ${config.nix.package}/bin/nix-env \
+          chroot /mnt ${config.nix.package.out}/bin/nix-env \
               -p /nix/var/nix/profiles/system --set ${config.system.build.toplevel} \
               --option build-users-group ""
 
@@ -102,7 +102,7 @@ in
 
   # Generate a GRUB menu.  Amazon's pv-grub uses this to boot our kernel/initrd.
   boot.loader.grub.device = "/dev/sda";
-  boot.loader.grub.timeout = 0;
+  boot.loader.timeout = 0;
 
   # Don't put old configurations in the GRUB menu.  The user has no
   # way to select them anyway.
@@ -111,7 +111,7 @@ in
   # Allow root logins only using the SSH key that the user specified
   # at instance creation time.
   services.openssh.enable = true;
-  services.openssh.permitRootLogin = "without-password";
+  services.openssh.permitRootLogin = "prohibit-password";
   services.openssh.passwordAuthentication = mkDefault false;
 
   # Force getting the hostname from Google Compute.
@@ -134,8 +134,8 @@ in
 
       wantedBy = [ "sshd.service" ];
       before = [ "sshd.service" ];
-      after = [ "network-online.target" "ip-up.target" ];
-      wants = [ "network-online.target" "ip-up.target" ];
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
 
       script = let wget = "${pkgs.wget}/bin/wget --retry-connrefused -t 15 --waitretry=10 --header='Metadata-Flavor: Google'";
                    mktemp = "mktemp --tmpdir=/run"; in

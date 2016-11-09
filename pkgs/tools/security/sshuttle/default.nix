@@ -3,11 +3,11 @@
   
 pythonPackages.buildPythonApplication rec {
   name = "sshuttle-${version}";
-  version = "0.76";
+  version = "0.78.0";
 
   src = fetchurl {
-    sha256 = "1q0hr0vhdvv23cw5dqndsmf61283mvs6b14662ci00xj6zp5v48b";
-    url = "https://pypi.python.org/packages/source/s/sshuttle/${name}.tar.gz";
+    sha256 = "18hrwi2gyri1n2rq0nghvv7hfhbhh5h67am89524vc1yyx40vn3b";
+    url = "mirror://pypi/s/sshuttle/${name}.tar.gz";
   };
 
   patches = [ ./sudo.patch ];
@@ -33,7 +33,7 @@ pythonPackages.buildPythonApplication rec {
       target network (though it does require Python 2 at both ends).
       Works with Linux and Mac OS and supports DNS tunneling.
     '';
-    maintainers = with maintainers; [ iElectric nckx ];
+    maintainers = with maintainers; [ domenkozar nckx ];
     platforms = platforms.unix;
   };
 }

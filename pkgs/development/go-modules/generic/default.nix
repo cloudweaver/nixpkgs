@@ -1,4 +1,4 @@
-{ go, govers, parallel, lib }:
+{ go, govers, parallel, lib, fetchgit, fetchhg, rsync }:
 
 { name, buildInputs ? [], nativeBuildInputs ? [], passthru ? {}, preFixup ? ""
 
@@ -17,6 +17,13 @@
 # Extra sources to include in the gopath
 , extraSrcs ? [ ]
 
+# Extra gopaths containing src subfolder
+# with sources to include in the gopath
+, extraSrcPaths ? [ ]
+
+# go2nix dependency file
+, goDeps ? null
+
 , dontRenameImports ? false
 
 # Do not enable this without good reason
@@ -27,14 +34,36 @@
 
 if disabled then throw "${name} not supported for go ${go.meta.branch}" else
 
+with builtins;
+
 let
   args = lib.filterAttrs (name: _: name != "extraSrcs") args';
 
-  removeReferences = [ go ];
+  removeReferences = [ ] ++ lib.optional (!allowGoReference) go;
 
   removeExpr = refs: lib.flip lib.concatMapStrings refs (ref: ''
     | sed "s,${ref},$(echo "${ref}" | sed "s,$NIX_STORE/[^-]*,$NIX_STORE/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee,"),g" \
   '');
+
+  dep2src = goDep:
+    {
+      inherit (goDep) goPackagePath;
+      src = if goDep.fetch.type == "git" then
+        fetchgit {
+          inherit (goDep.fetch) url rev sha256;
+        }
+      else if goDep.fetch.type == "hg" then
+        fetchhg {
+          inherit (goDep.fetch) url rev sha256;
+        }
+      else abort "Unrecognized package fetch type";
+    };
+
+  importGodeps = { depsFile }:
+    map dep2src (import depsFile);
+
+  goPath = if goDeps != null then importGodeps { depsFile = goDeps; } ++ extraSrcs
+                             else extraSrcs;
 in
 
 go.stdenv.mkDerivation (
@@ -53,13 +82,16 @@ go.stdenv.mkDerivation (
     mkdir -p "go/src/$(dirname "$goPackagePath")"
     mv "$sourceRoot" "go/src/$goPackagePath"
 
-  '' + lib.flip lib.concatMapStrings extraSrcs ({ src, goPackagePath }: ''
-    mkdir extraSrc
-    (cd extraSrc; unpackFile "${src}")
+  '' + lib.flip lib.concatMapStrings goPath ({ src, goPackagePath }: ''
+    mkdir goPath
+    (cd goPath; unpackFile "${src}")
     mkdir -p "go/src/$(dirname "${goPackagePath}")"
-    chmod -R u+w extraSrc/*
-    mv extraSrc/* "go/src/${goPackagePath}"
-    rmdir extraSrc
+    chmod -R u+w goPath/*
+    mv goPath/* "go/src/${goPackagePath}"
+    rmdir goPath
+
+  '') + (lib.optionalString (extraSrcPaths != []) ''
+    ${rsync}/bin/rsync -a ${lib.concatMapStrings (p: "${p}/src") extraSrcPaths} go
 
   '') + ''
     export GOPATH=$NIX_BUILD_TOP/go:$GOPATH
@@ -106,7 +138,7 @@ go.stdenv.mkDerivation (
         echo "$subPackages" | sed "s,\(^\| \),\1$goPackagePath/,g"
       else
         pushd go/src >/dev/null
-        find "$goPackagePath" -type f -name \*$type.go -exec dirname {} \; | sort | uniq
+        find "$goPackagePath" -type f -name \*$type.go -exec dirname {} \; | grep -v "/vendor/" | sort | uniq
         popd >/dev/null
       fi
     }
@@ -155,15 +187,27 @@ go.stdenv.mkDerivation (
     done < <(find $bin/bin -type f 2>/dev/null)
   '';
 
+  shellHook = ''
+    d=$(mktemp -d "--suffix=-$name")
+  '' + toString (map (dep: ''
+     mkdir -p "$d/src/$(dirname "${dep.goPackagePath}")"
+     ln -s "${dep.src}" "$d/src/${dep.goPackagePath}"
+  ''
+  ) goPath) + ''
+    export GOPATH="$d:$GOPATH"
+  '';
+
   disallowedReferences = lib.optional (!allowGoReference) go
     ++ lib.optional (!dontRenameImports) govers;
 
-  passthru = passthru // lib.optionalAttrs (goPackageAliases != []) { inherit goPackageAliases; };
+  passthru = passthru //
+    { inherit go; } //
+    lib.optionalAttrs (goPackageAliases != []) { inherit goPackageAliases; };
 
   enableParallelBuilding = enableParallelBuilding;
 
   # I prefer to call this dev but propagatedBuildInputs expects $out to exist
-  outputs = [ "out" "bin" ];
+  outputs = args.outputs or [ "bin" "out" ];
 
   meta = {
     # Add default meta information

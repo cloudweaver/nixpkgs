@@ -1,26 +1,24 @@
-{ stdenv, fetchurl, qt4, poppler_qt4, zlib, pkgconfig}:
+{ stdenv, fetchurl, qt4, qmake4Hook, poppler_qt4, zlib, pkgconfig}:
 
 stdenv.mkDerivation rec {
   pname = "texstudio";
-  version = "2.9.4";
+  version = "2.11.2";
   name = "${pname}-${version}";
   altname="Texstudio";
 
   src = fetchurl {
     url = "mirror://sourceforge/texstudio/${name}.tar.gz";
-    sha256 = "1smmc4xqs8x8qzp6iqj2wr4xarfnxxxp6rq6chx1kb256w75jwfw";
+    sha256 = "1p6ja5y5902y814f3f5mafh0y8vj682ghrarx1pbm4r5ap8x9z82";
   };
 
-  buildInputs = [ qt4 poppler_qt4 zlib pkgconfig];
+  buildInputs = [ qt4 qmake4Hook poppler_qt4 zlib pkgconfig ];
 
-  preConfigure = ''
-    qmake PREFIX=$out NO_APPDATA=True texstudio.pro
-  '';
+  qmakeFlags = [ "NO_APPDATA=True" ];
 
   meta = with stdenv.lib; {
     description = "TeX and LaTeX editor";
     longDescription=''
-	Fork of TeXMaker, this editor is a full fledged IDE for 
+	Fork of TeXMaker, this editor is a full fledged IDE for
 	LaTeX editing with completion, structure viewer, preview,
 	spell checking and support of any compilation chain.
 	'';

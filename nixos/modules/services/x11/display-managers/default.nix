@@ -32,6 +32,12 @@ let
     ''
       #! ${pkgs.bash}/bin/bash
 
+      ${optionalString cfg.displayManager.logToJournal ''
+        if [ -z "$_DID_SYSTEMD_CAT" ]; then
+          _DID_SYSTEMD_CAT=1 exec ${config.systemd.package}/bin/systemd-cat -t xsession -- "$0" "$@"
+        fi
+      ''}
+
       . /etc/profile
       cd "$HOME"
 
@@ -39,24 +45,13 @@ let
       sessionType="$1"
       if [ "$sessionType" = default ]; then sessionType=""; fi
 
-      ${optionalString (!cfg.displayManager.job.logsXsession) ''
+      ${optionalString (!cfg.displayManager.job.logsXsession && !cfg.displayManager.logToJournal) ''
         exec > ~/.xsession-errors 2>&1
       ''}
 
       ${optionalString cfg.startDbusSession ''
         if test -z "$DBUS_SESSION_BUS_ADDRESS"; then
-          exec ${pkgs.dbus.tools}/bin/dbus-launch --exit-with-session "$0" "$sessionType"
-        fi
-      ''}
-
-      ${optionalString cfg.startGnuPGAgent ''
-        if test -z "$SSH_AUTH_SOCK"; then
-            # Restart this script as a child of the GnuPG agent.
-            exec "${pkgs.gnupg}/bin/gpg-agent"                         \
-              --enable-ssh-support --daemon                             \
-              --pinentry-program "${pkgs.pinentry}/bin/pinentry-gtk-2"  \
-              --write-env-file "$HOME/.gpg-agent-info"                  \
-              "$0" "$sessionType"
+          exec ${pkgs.dbus.dbus-launch} --exit-with-session "$0" "$sessionType"
         fi
       ''}
 
@@ -66,11 +61,11 @@ let
       # Start PulseAudio if enabled.
       ${optionalString (config.hardware.pulseaudio.enable) ''
         ${optionalString (!config.hardware.pulseaudio.systemWide)
-          "${config.hardware.pulseaudio.package}/bin/pulseaudio --start"
+          "${config.hardware.pulseaudio.package.out}/bin/pulseaudio --start"
         }
 
         # Publish access credentials in the root window.
-        ${config.hardware.pulseaudio.package}/bin/pactl load-module module-x11-publish "display=$DISPLAY"
+        ${config.hardware.pulseaudio.package.out}/bin/pactl load-module module-x11-publish "display=$DISPLAY"
       ''}
 
       # Tell systemd about our $DISPLAY. This is needed by the
@@ -93,6 +88,8 @@ let
       # Work around KDE errors when a user first logs in and
       # .local/share doesn't exist yet.
       mkdir -p $HOME/.local/share
+
+      unset _DID_SYSTEMD_CAT
 
       ${cfg.displayManager.sessionCommands}
 
@@ -136,6 +133,10 @@ let
         '') dm}
         (*) echo "$0: Desktop manager '$desktopManager' not found.";;
       esac
+
+      ${optionalString cfg.updateDbusEnvironment ''
+        ${lib.getBin pkgs.dbus}/bin/dbus-update-activation-environment --systemd --all
+      ''}
 
       test -n "$waitPID" && wait "$waitPID"
       exit 0
@@ -281,16 +282,27 @@ in
 
       };
 
+      logToJournal = mkOption {
+        type = types.bool;
+        default = true;
+        description = ''
+          By default, the stdout/stderr of sessions is written
+          to <filename>~/.xsession-errors</filename>. When this option
+          is enabled, it will instead be written to the journal.
+        '';
+      };
+
     };
 
   };
 
   config = {
-    services.xserver.displayManager.xserverBin = "${xorg.xorgserver}/bin/X";
+    services.xserver.displayManager.xserverBin = "${xorg.xorgserver.out}/bin/X";
   };
 
   imports = [
-   (mkRemovedOptionModule [ "services" "xserver" "displayManager" "desktopManagerHandlesLidAndPower" ])
+   (mkRemovedOptionModule [ "services" "xserver" "displayManager" "desktopManagerHandlesLidAndPower" ]
+     "The option is no longer necessary because all display managers have already delegated lid management to systemd.")
   ];
 
 }

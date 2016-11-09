@@ -152,12 +152,12 @@ rec {
 
   cdt = buildEclipseUpdateSite rec {
     name = "cdt-${version}";
-    version = "8.8.0";
+    version = "9.0.1";
 
     src = fetchzip {
       stripRoot = false;
-      url = "https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/tools/cdt/releases/8.8/${name}.zip";
-      sha256 = "1i1m7g5128q21njgrkiw71y4vi4aqzz8xdd4iv80j3nsvhbv6cnm";
+      url = "https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/tools/cdt/releases/9.0/${name}.zip";
+      sha256 = "0vdx0j9ci533wnk7y17qjvjyqx38hlrdw67z6pi05vfv3r6ys39x";
     };
 
     meta = with stdenv.lib; {
@@ -171,12 +171,12 @@ rec {
 
   checkstyle = buildEclipseUpdateSite rec {
     name = "checkstyle-${version}";
-    version = "6.14.0.201601142217";
+    version = "6.19.1.201607051943";
 
     src = fetchzip {
       stripRoot = false;
-      url = "mirror://sourceforge/project/eclipse-cs/Eclipse%20Checkstyle%20Plug-in/6.14.0/net.sf.eclipsecs-updatesite_${version}-bin.zip";
-      sha256 = "0ysxir1fv0mb9xnidc9hv6llnk48lkav0sryjbx7pw7vy1f8nd4c";
+      url = "mirror://sourceforge/project/eclipse-cs/Eclipse%20Checkstyle%20Plug-in/6.19.1/net.sf.eclipsecs-updatesite_${version}.zip";
+      sha256 = "03aah57g0cgxym95p1wcj2h69xy3r9c0vv7js3gpmw1hx8w9sjsf";
     };
 
     meta = with stdenv.lib; {
@@ -214,21 +214,22 @@ rec {
 
   cup = buildEclipsePluginBase rec {
     name = "cup-${version}";
-    version = "1.0.0.201412081321";
+    version = "1.1.0.201604221613";
+    version_ = "1.0.0.201604221613";
 
     srcFeature = fetchurl {
       url = "http://www2.in.tum.de/projects/cup/eclipse/features/CupEclipsePluginFeature_${version}.jar";
-      sha256 = "353513445f77ed144687bafc20ab85dc31f2f95ffdc47f102ab773ab0b7afb8b";
+      sha256 = "13nnsf0cqg02z3af6xg45rhcgiffsibxbx6h1zahjv7igvqgkyna";
     };
 
     srcPlugin1 = fetchurl {
-      url = "http://www2.in.tum.de/projects/cup/eclipse/plugins/CupReferencedLibraries_${version}.jar";
-      sha256 = "082b5ed8730ad065efaac6ea2812dae15669ae74a49778911125b171bea41187";
+      url = "http://www2.in.tum.de/projects/cup/eclipse/plugins/CupReferencedLibraries_${version_}.jar";
+      sha256 = "0kif8kivrysprva1pxzajm88gi967qf7idhb6ga2xpvsdcris91j";
     };
 
     srcPlugin2 = fetchurl {
       url = "http://www2.in.tum.de/projects/cup/eclipse/plugins/de.tum.in.www2.CupPlugin_${version}.jar";
-      sha256 = "6b67937fa11944b0330173a9d8564a19eccd705e76b96291d80077a1d7344939";
+      sha256 = "022phbrsny3gb8npb6sxyqqxacx138q5bd7dq3gqxh3kprx5chbl";
     };
 
     srcs = [ srcFeature srcPlugin1 srcPlugin2 ];
@@ -321,12 +322,12 @@ rec {
 
   gnuarmeclipse = buildEclipseUpdateSite rec {
     name = "gnuarmeclipse-${version}";
-    version = "2.11.1-201512141335";
+    version = "3.1.1-201606210758";
 
     src = fetchzip {
       stripRoot = false;
       url = "https://github.com/gnuarmeclipse/plug-ins/releases/download/v${version}/ilg.gnuarmeclipse.repository-${version}.zip";
-      sha256 = "1ijvnahfw2wc860la7kj8b52z2sfm8k1yk62bl0d4lq60y3aycg9";
+      sha256 = "1g77jlhfa3csaxxps1z5lasrd9l2p5ajnddnq9ra5syw8ggkdc2h";
     };
 
     meta = with stdenv.lib; {
@@ -340,12 +341,12 @@ rec {
 
   jdt = buildEclipseUpdateSite rec {
     name = "jdt-${version}";
-    version = "4.5.1";
+    version = "4.6";
 
     src = fetchzip {
       stripRoot = false;
-      url = "https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/eclipse/downloads/drops4/R-4.5.1-201509040015/org.eclipse.jdt-4.5.1.zip";
-      sha256 = "0nxi552vvpjalnsqhc0zi6fgaj9p22amxsiczpv7za4kr7m47x73";
+      url = "https://www.eclipse.org/downloads/download.php?r=1&nf=1&file=/eclipse/downloads/drops4/R-4.6-201606061100/org.eclipse.jdt-4.6.zip";
+      sha256 = "0raz8d09fnnx19l012l5frca97qavfivvygn3mvsllcyskhqc5hg";
     };
 
     meta = with stdenv.lib; {
@@ -357,13 +358,38 @@ rec {
     };
   };
 
+  rustdt = buildEclipseUpdateSite rec {
+    name = "rustdt-${version}";
+    version = "0.6.2";
+    owner = "RustDT";
+    repo = "rustdt.github.io";
+    rev = "5cbe753008c40555c493092a6f4ae1ffbff0b3ce";
+
+    src = fetchzip {
+      stripRoot = false;
+      url = "https://github.com/${owner}/${repo}/archive/${rev}.zip";
+      sha256 = "1xfj4j27d1h4bdf2v7f78zi8lz4zkkj7s9kskmsqx5jcs2d459yp";
+      extraPostFetch =
+        ''
+          mv "$out/${repo}-${rev}/releases/local-repo"/* "$out/"
+        '';
+    };
+
+    meta = with stdenv.lib; {
+      homepage = https://github.com/RustDT;
+      description = "Rust development tooling";
+      license = licenses.epl10;
+      platforms = platforms.all;
+    };
+  };
+
   scala = buildEclipseUpdateSite rec {
     name = "scala-${version}";
-    version = "4.3.0.201512011535";
+    version = "4.4.1.201605041056";
 
     src = fetchzip {
       url = "http://download.scala-ide.org/sdk/lithium/e44/scala211/stable/update-site.zip";
-      sha256 = "1j0qw4frkvvmyl64wdbznglgjjr9sfg8wb9npar0x7qv1hj4hw3x";
+      sha256 = "13xgx2rwlll0l4bs0g6gyvrx5gcc0125vzn501fdj0wv2fqxn5lw";
     };
 
     meta = with stdenv.lib; {
@@ -377,16 +403,16 @@ rec {
 
   testng = buildEclipsePlugin rec {
     name = "testng-${version}";
-    version = "6.9.10.201512020421";
+    version = "6.9.12.201607091356";
 
     srcFeature = fetchurl {
       url = "http://beust.com/eclipse-old/eclipse_${version}/features/org.testng.eclipse_${version}.jar";
-      sha256 = "17y0cb1xprldjav14iy2sinv7lcw4xnjs2fwz9gl41m9m1c0hajk";
+      sha256 = "06c6885d3ggg1i085zhfwayj06jn4v1jip9zz40921vpq0iand54";
     };
 
     srcPlugin = fetchurl {
       url = "http://beust.com/eclipse-old/eclipse_${version}/plugins/org.testng.eclipse_${version}.jar";
-      sha256 = "1iwq0ifk9l56z11vhy5yscvl8l1xk6igkp103v9vwvcx6nlmkfgc";
+      sha256 = "0bpyb9bnh8kglajmdzb7pr21i1sly73kwdjbygg75ad7z37l58br";
     };
 
     meta = with stdenv.lib; {

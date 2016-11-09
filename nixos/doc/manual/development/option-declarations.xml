@@ -7,8 +7,8 @@
 <title>Option Declarations</title>
 
 <para>An option declaration specifies the name, type and description
-of a NixOS configuration option.  It is illegal to define an option
-that has not been declared in any module. A option declaration
+of a NixOS configuration option.  It is invalid to define an option
+that hasn’t been declared in any module.  An option declaration
 generally looks like this:
 
 <programlisting>
@@ -31,9 +31,9 @@ options = {
   <varlistentry>
     <term><varname>type</varname></term>
     <listitem>
-      <para>The type of the option (see below).  It may be omitted,
-      but that’s not advisable since it may lead to errors that are
-      hard to diagnose.</para>
+      <para>The type of the option (see <xref linkend='sec-option-types' />).
+      It may be omitted, but that’s not advisable since it may lead to errors
+      that are hard to diagnose.</para>
     </listitem>
   </varlistentry>
 
@@ -42,7 +42,7 @@ options = {
     <listitem>
       <para>The default value used if no value is defined by any
       module.  A default is not required; in that case, if the option
-      value is ever used, an error will be thrown.</para>
+      value is never used, an error will be thrown.</para>
     </listitem>
   </varlistentry>
 
@@ -65,188 +65,92 @@ options = {
 
 </para>
 
-<para>Here is a non-exhaustive list of option types:
+<section xml:id="sec-option-declarations-eot"><title>Extensible Option 
+    Types</title>
 
-<variablelist>
+  <para>Extensible option types is a feature that allow to extend certain types 
+    declaration through multiple module files.
+    This feature only work with a restricted set of types, namely 
+    <literal>enum</literal> and <literal>submodules</literal> and any composed
+    forms of them.</para>
 
-  <varlistentry>
-    <term><varname>types.bool</varname></term>
-    <listitem>
-      <para>A Boolean.</para>
+  <para>Extensible option types can be used for <literal>enum</literal> options 
+    that affects multiple modules, or as an alternative to related 
+    <literal>enable</literal> options.</para>
+
+  <para>As an example, we will take the case of display managers. There is a
+    central display manager module for generic display manager options and a
+    module file per display manager backend (slim, kdm, gdm ...).
+  </para>
+
+  <para>There are two approach to this module structure:
+
+  <itemizedlist>
+    <listitem><para>Managing the display managers independently by adding an
+        enable option to every display manager module backend. (NixOS)</para>
     </listitem>
-  </varlistentry>
-
-  <varlistentry>
-    <term><varname>types.int</varname></term>
-    <listitem>
-      <para>An integer.</para>
+    <listitem><para>Managing the display managers in the central module by
+        adding an option to select which display manager backend to use.</para>
     </listitem>
-  </varlistentry>
+  </itemizedlist>
+  </para>
 
-  <varlistentry>
-    <term><varname>types.str</varname></term>
-    <listitem>
-      <para>A string.</para>
-    </listitem>
-  </varlistentry>
-
-  <varlistentry>
-    <term><varname>types.lines</varname></term>
-    <listitem>
-      <para>A string.  If there are multiple definitions, they are
-      concatenated, with newline characters in between.</para>
-    </listitem>
-  </varlistentry>
-
-  <varlistentry>
-    <term><varname>types.path</varname></term>
-    <listitem>
-      <para>A path, defined as anything that, when coerced to a
-      string, starts with a slash.  This includes derivations.</para>
-    </listitem>
-  </varlistentry>
-
-  <varlistentry>
-    <term><varname>types.package</varname></term>
-    <listitem>
-      <para>A derivation (such as <literal>pkgs.hello</literal>) or a
-      store path (such as
-      <filename>/nix/store/1ifi1cfbfs5iajmvwgrbmrnrw3a147h9-hello-2.10</filename>).</para>
-    </listitem>
-  </varlistentry>
-
-  <varlistentry>
-    <term><varname>types.listOf</varname> <replaceable>t</replaceable></term>
-    <listitem>
-      <para>A list of elements of type <replaceable>t</replaceable>
-      (e.g., <literal>types.listOf types.str</literal> is a list of
-      strings).  Multiple definitions are concatenated together.</para>
-    </listitem>
-  </varlistentry>
-
-  <varlistentry>
-    <term><varname>types.attrsOf</varname> <replaceable>t</replaceable></term>
-    <listitem>
-      <para>A set of elements of type <replaceable>t</replaceable>
-      (e.g., <literal>types.attrsOf types.int</literal> is a set of
-      name/value pairs, the values being integers).</para>
-    </listitem>
-  </varlistentry>
-
-  <varlistentry>
-    <term><varname>types.nullOr</varname> <replaceable>t</replaceable></term>
-    <listitem>
-      <para>Either the value <literal>null</literal> or something of
-      type <replaceable>t</replaceable>.</para>
-    </listitem>
-  </varlistentry>
-
-</variablelist>
-
-You can also create new types using the function
-<varname>mkOptionType</varname>.  See
-<filename>lib/types.nix</filename> in Nixpkgs for details.
-
-An option declaration must follow the following rules:
-<itemizedlist mark='bullet'>
-
-  <listitem>
-    <para>A <varname>defaultText</varname> must be defined if and only if the type of the option
-    derives from <varname>package</varname>, <varname>packageSet</varname> or <varname>nixpkgsConfig
-    </varname>, and if and only if a <varname>default</varname> attribute is defined and if and only if
-    the value of the <varname>default</varname> attribute is not the default of the type of the
-    option declaration.
-
-    For example, a <varname>defaultText</varname> must be defined for
-<programlisting>
-type = types.listOf types.package;
-default = [ pkgs.foo; ];
-defaultText = "[ pkgs.foo; ]";
-</programlisting>.
-
-    But no <varname>defaultText</varname> must be defined for
-<programlisting>
-type = types.listOf types.package;
-default = [];
-</programlisting>,
-    as <varname>[]</varname> is the default of <varname>types.listOf types.package</varname>.
-    </para>
-  </listitem>
-
-  <listitem>
-    <para>A <varname>defaultText</varname> can be defined if the type of the option derives from
-    <varname>path</varname> and if a <varname>default</varname> attribute is defined.</para>
-  </listitem>
-
-  <listitem>
-    <para>The value of the <varname>example</varname> attribute must be wrapped with <varname>
-    literalExample</varname> if the type of the option derives from <varname>package</varname>,
-    <varname>packageSet</varname> or <varname>nixpkgsConfig</varname>.</para>
-  </listitem>
-
-  <listitem>
-    <para>The value of <varname>defaultText</varname> and <varname>literalExample</varname> must
-    be a string which contains a valid nix expression. The nix expression has to evaluate in
-    <code>{pkgs}: <replaceable>value</replaceable></code>.
-    For example:
-    <itemizedlist>
-      <listitem>
-	<para>A <varname>defaultText</varname> could, e.g., be:
-<programlisting>
-type = types.package;
-default = pkgs.foo;
-defaultText = "pkgs.foo";
-</programlisting>
-        But not <code>defaultText = "pkgs.foo;";</code>, as that
-        corresponds to <code>{pkgs}: pkgs.foo;</code>, which is an
-	invalid nix expression due to the ending with <varname>;</varname>.</para>
-      </listitem>
+  <para>Both approachs have problems.</para>
     
-      <listitem>
-	<para>A <varname>literalExample</varname> could be used as, e.g.:
-<programlisting>
-type = types.path;
-example = literalExample "\"\${pkgs.bar}/bin/bar\"";
-</programlisting>
-        But not <code>literalExample "\${pkgs.bar}/bin/bar";</code>, as that corresponds
-	to <code>{pkgs}: ${pkgs.bar}/bin/bar</code>, which is an invalid nix expression
-	as the <varname>path</varname> is not a <varname>string</varname> anymore.</para>
-      </listitem>
-    </itemizedlist></para>
-  </listitem>
+  <para>Making backends independent can quickly become hard to manage. For
+    display managers, there can be only one enabled at a time, but the type
+    system can not enforce this restriction as there is no relation between
+    each backend <literal>enable</literal> option. As a result, this restriction
+    has to be done explicitely by adding assertions in each display manager
+    backend module.</para>
 
-  <listitem>
-    <para>The <varname>type</varname> attribute must be defined for every option declaration.</para>
-  </listitem>
+  <para>On the other hand, managing the display managers backends in the
+    central module will require to change the central module option every time
+    a new backend is added or removed.</para>
 
-</itemizedlist>
+  <para>By using extensible option types, it is possible to create a placeholder 
+    option in the central module (<xref linkend='ex-option-declaration-eot-service' 
+      />), and to extend it in each backend module (<xref 
+      linkend='ex-option-declaration-eot-backend-slim' />, <xref 
+      linkend='ex-option-declaration-eot-backend-kdm' />).</para>
+ 
+  <para>As a result, <literal>displayManager.enable</literal> option values can
+  be added without changing the main service module file and the type system
+  automatically enforce that there can only be a single display manager
+  enabled.</para>
 
-NixOS ships the tool <varname>nixos-typecheck</varname> that can check an option declaration to:
+<example xml:id='ex-option-declaration-eot-service'><title>Extensible type 
+    placeholder in the service module</title>
+<screen>
+services.xserver.displayManager.enable = mkOption {
+  description = "Display manager to use";
+  type = with types; nullOr (enum [ ]);
+};</screen></example>
 
-<itemizedlist mark='bullet'>
+<example xml:id='ex-option-declaration-eot-backend-slim'><title>Extending 
+    <literal>services.xserver.displayManager.enable</literal> in the 
+    <literal>slim</literal> module</title>
+<screen>
+services.xserver.displayManager.enable = mkOption {
+  type = with types; nullOr (enum [ "slim" ]);
+};</screen></example>
 
-  <listitem>
-    <para>Enforce that an option declaration has a <varname>defaultText</varname> if and only if the
-    type of the option derives from <varname>package</varname>, <varname>packageSet</varname> or
-    <varname>nixpkgsConfig</varname> and if a <varname>default</varname> attribute is defined.</para>
-  </listitem>
+<example xml:id='ex-option-declaration-eot-backend-kdm'><title>Extending 
+    <literal>services.foo.backend</literal> in the <literal>kdm</literal> 
+    module</title>
+<screen>
+services.xserver.displayManager.enable = mkOption {
+  type = with types; nullOr (enum [ "kdm" ]);
+};</screen></example>
 
-  <listitem>
-    <para>Enforce that the value of the <varname>example</varname> attribute is wrapped with <varname>
-    literalExample</varname> if the type of the option derives from <varname>package</varname>,
-    <varname>packageSet</varname> or <varname>nixpkgsConfig</varname>.</para>
-  </listitem>
+<para>The placeholder declaration is a standard <literal>mkOption</literal> 
+  declaration, but it is important that extensible option declarations only use 
+  the <literal>type</literal> argument.</para>
 
-  <listitem>
-    <para>Warn if a <varname>defaultText</varname> is defined in an option declaration if the type of
-    the option does not derive from <varname>package</varname>, <varname>packageSet</varname> or
-    <varname>nixpkgsConfig</varname>.</para>
-  </listitem>
+<para>Extensible option types work with any of the composed variants of 
+  <literal>enum</literal> such as 
+  <literal>with types; nullOr (enum [ "foo" "bar" ])</literal> 
+  or <literal>with types; listOf (enum [ "foo" "bar" ])</literal>.</para>
 
-  <listitem>
-    <para>Warn if no <varname>type</varname> is defined in an option declaration.</para>
-  </listitem>
-
-</itemizedlist></para>
-
+</section>
 </section>

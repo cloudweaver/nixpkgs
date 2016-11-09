@@ -21,6 +21,9 @@ let
 
     [logging]
     level=WARN
+
+    [connection]
+    ipv6.ip6-privacy=2
   '';
 
   /*
@@ -47,14 +50,6 @@ let
         ))
           { return polkit.Result.YES; }
     });
-  '';
-
-  ipUpScript = writeScript "01nixos-ip-up" ''
-    #!/bin/sh
-    if test "$2" = "up"; then
-      ${config.systemd.package}/bin/systemctl start ip-up.target
-      ${config.systemd.package}/bin/systemctl start network-online.target
-    fi
   '';
 
   ns = xs: writeText "nameservers" (
@@ -185,9 +180,6 @@ in {
     boot.kernelModules = [ "ppp_mppe" ]; # Needed for most (all?) PPTP VPN connections.
 
     environment.etc = with cfg.basePackages; [
-      { source = ipUpScript;
-        target = "NetworkManager/dispatcher.d/01nixos-ip-up";
-      }
       { source = configFile;
         target = "NetworkManager/NetworkManager.conf";
       }
@@ -205,6 +197,9 @@ in {
       }
       { source = "${networkmanager_l2tp}/etc/NetworkManager/VPN/nm-l2tp-service.name";
         target = "NetworkManager/VPN/nm-l2tp-service.name";
+      }
+      { source = "${networkmanager_strongswan}/etc/NetworkManager/VPN/nm-strongswan-service.name";
+        target = "NetworkManager/VPN/nm-strongswan-service.name";
       }
     ] ++ optional (cfg.appendNameservers == [] || cfg.insertNameservers == [])
            { source = overrideNameserversScript;
@@ -228,28 +223,17 @@ in {
     users.extraUsers = [{
       name = "nm-openvpn";
       uid = config.ids.uids.nm-openvpn;
-    }
-    {
-      # to enable link-local connections
-      name = "avahi-autoipd";
-      uid = config.ids.uids.avahi-autoipd;
     }];
 
     systemd.packages = cfg.packages;
 
-    # Create an initialisation service that both starts
-    # NetworkManager when network.target is reached,
-    # and sets up necessary directories for NM.
-    systemd.services."networkmanager-init" = {
-      description = "NetworkManager initialisation";
+    systemd.services."network-manager" = {
       wantedBy = [ "network.target" ];
-      wants = [ "network-manager.service" ];
-      before = [ "network-manager.service" ];
-      script = ''
+
+      preStart = ''
         mkdir -m 700 -p /etc/NetworkManager/system-connections
         mkdir -m 755 -p ${stateDirs}
       '';
-      serviceConfig.Type = "oneshot";
     };
 
     # Turn off NixOS' network management

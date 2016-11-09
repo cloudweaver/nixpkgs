@@ -2,11 +2,11 @@
 
 stdenv.mkDerivation rec {
   name = "thttpd-${version}";
-  version = "2.26";
+  version = "2.27";
 
   src = fetchurl {
     url = "http://acme.com/software/thttpd/${name}.tar.gz";
-    sha256 = "1idlpnwrd5fpmnfh477h1lzanavx8jxir2d8adax46zy472dg4s6";
+    sha256 = "0ykda5k1zzzag59zbd4bkzj1psavq0xnpy7vpk19rhx7mlvvri5i";
   };
 
   prePatch = ''
@@ -23,5 +23,6 @@ stdenv.mkDerivation rec {
     description = "Tiny/turbo/throttling HTTP server";
     homepage = "http://www.acme.com/software/thttpd/";
     license = stdenv.lib.licenses.bsd2;
+    platforms = stdenv.lib.platforms.linux;
   };
 }

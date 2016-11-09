@@ -4,20 +4,21 @@
 }:
 
 stdenv.mkDerivation rec {
-  name = "gst-plugins-base-1.6.1";
+  name = "gst-plugins-base-1.8.2";
 
   meta = {
     description = "Base plugins and helper libraries";
     homepage = "http://gstreamer.freedesktop.org";
     license = stdenv.lib.licenses.lgpl2Plus;
     platforms = stdenv.lib.platforms.unix;
-    maintainers = with stdenv.lib.maintainers; [ iyzsong ];
   };
 
   src = fetchurl {
     url = "${meta.homepage}/src/gst-plugins-base/${name}.tar.xz";
-    sha256 = "18sbyjcp281zb3bsqji3pglsdsxi0s6ai7rx90sx8cpflkxdqcwm";
+    sha256 = "9d7109c8fb0a5dec8edb17b0053c59a46aba7ddf48dc48ea822ebbbd4339d38d";
   };
+
+  outputs = [ "out" "dev" ];
 
   nativeBuildInputs = [
     pkgconfig python gobjectIntrospection
@@ -32,7 +33,7 @@ stdenv.mkDerivation rec {
 
   propagatedBuildInputs = [ gstreamer ];
 
-  configureFlags = if stdenv.isDarwin then [ 
+  configureFlags = if stdenv.isDarwin then [
     # Does not currently build on Darwin
     "--disable-libvisual"
     # Undefined symbols _cdda_identify and _cdda_identify_scsi in cdparanoia

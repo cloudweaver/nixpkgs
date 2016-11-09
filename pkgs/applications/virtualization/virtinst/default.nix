@@ -13,9 +13,9 @@ stdenv.mkDerivation rec {
   };
 
   pythonPath = with pythonPackages;
-    [ setuptools eventlet greenlet gflags netaddr sqlalchemy carrot routes
-      PasteDeploy m2crypto ipy twisted sqlalchemy_migrate
-      distutils_extra simplejson readline glanceclient cheetah lockfile httplib2
+    [ setuptools eventlet greenlet gflags netaddr carrot routes
+      PasteDeploy m2crypto ipy twisted
+      distutils_extra simplejson glanceclient cheetah lockfile httplib2
       # !!! should libvirt be a build-time dependency?  Note that
       # libxml2Python is a dependency of libvirt.py.
       libvirt libxml2Python urlgrabber
@@ -41,5 +41,6 @@ stdenv.mkDerivation rec {
     license = stdenv.lib.licenses.gpl2Plus;
     maintainers = with stdenv.lib.maintainers; [qknight];
     description = "Command line tool which provides an easy way to provision operating systems into virtual machines";
+    platforms = with stdenv.lib.platforms; linux;
   };
 }

@@ -1,19 +1,19 @@
 { stdenv, fetchurl, fetchpatch
 , pkgconfig, makeWrapper
 , libxml2, gnutls, devicemapper, perl, python
-, iproute, iptables, readline, lvm2, utillinux, udev, libpciaccess, gettext
+, iproute, iptables, readline, lvm2, utillinux, systemd, libpciaccess, gettext
 , libtasn1, ebtables, libgcrypt, yajl, pmutils, libcap_ng
 , dnsmasq, libnl, libpcap, libxslt, xhtml1, numad, numactl, perlPackages
-, curl, libiconv, gmp, xen
+, curl, libiconv, gmp, xen, zfs
 }:
-
+# if you update, also bump pythonPackages.libvirt or it will break
 stdenv.mkDerivation rec {
   name = "libvirt-${version}";
-  version = "1.3.0";
+  version = "2.2.0";
 
   src = fetchurl {
-    url = "http://libvirt.org/sources/${name}.tar.gz";
-    sha256 = "ebcf5645fa565e3fe2fe94a86e841db9b768cf0e0a7e6cf395c6327f9a23bd64";
+    url = "http://libvirt.org/sources/${name}.tar.xz";
+    sha256 = "168ng4k5sik2jiylrlpmqdj3g8hnmsmvh84y8nvfgc7fdbbah5g3";
   };
 
   patches = [ ./build-on-bsd.patch ];
@@ -24,15 +24,16 @@ stdenv.mkDerivation rec {
     gettext libtasn1 libgcrypt yajl
     libxslt xhtml1 perlPackages.XMLXPath curl libpcap
   ] ++ stdenv.lib.optionals stdenv.isLinux [
-    libpciaccess devicemapper lvm2 utillinux udev libcap_ng
-    libnl numad numactl xen
+    libpciaccess devicemapper lvm2 utillinux systemd libcap_ng
+    libnl numad numactl xen zfs
   ] ++ stdenv.lib.optionals stdenv.isDarwin [
      libiconv gmp
   ];
 
   preConfigure = stdenv.lib.optionalString stdenv.isLinux ''
-    PATH=${iproute}/sbin:${iptables}/sbin:${ebtables}/sbin:${lvm2}/sbin:${udev}/sbin:$PATH
-    substituteInPlace configure --replace 'as_dummy="/bin:/usr/bin:/usr/sbin"' 'as_dummy="${numad}/bin"'
+    PATH=${stdenv.lib.makeBinPath [ iproute iptables ebtables lvm2 systemd ]}:$PATH
+    substituteInPlace configure \
+      --replace 'as_dummy="/bin:/usr/bin:/usr/sbin"' 'as_dummy="${numad}/bin"'
   '' + ''
     PATH=${dnsmasq}/bin:$PATH
     patchShebangs . # fixes /usr/bin/python references
@@ -52,6 +53,7 @@ stdenv.mkDerivation rec {
     "--with-macvtap"
     "--with-virtualport"
     "--with-init-script=redhat"
+    "--with-storage-zfs"
   ] ++ stdenv.lib.optionals stdenv.isDarwin [
     "--with-init-script=none"
   ];
@@ -67,7 +69,7 @@ stdenv.mkDerivation rec {
       --replace "$out/bin" "${gettext}/bin"
   '' + stdenv.lib.optionalString stdenv.isLinux ''
     wrapProgram $out/sbin/libvirtd \
-      --prefix PATH : ${iptables}/sbin:${iproute}/sbin:${pmutils}/bin:${numad}/bin:${numactl}/bin
+      --prefix PATH : ${stdenv.lib.makeBinPath [ iptables iproute pmutils numad numactl ]}
   '';
 
   enableParallelBuilding = true;
@@ -83,5 +85,6 @@ stdenv.mkDerivation rec {
     '';
     license = licenses.lgpl2Plus;
     platforms = platforms.unix;
+    maintainers = with maintainers; [ fpletz ];
   };
 }

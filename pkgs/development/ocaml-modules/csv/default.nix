@@ -1,4 +1,4 @@
-{ stdenv, fetchzip, ocaml, findlib }:
+{ stdenv, fetchzip, ocaml, findlib, ocamlbuild }:
 
 stdenv.mkDerivation {
 
@@ -9,7 +9,7 @@ stdenv.mkDerivation {
     sha256 = "05s8py2qr3889c72g1q07r15pzch3j66xdphxi2sd93h5lvnpi4j";
   };
 
-  buildInputs = [ ocaml findlib ];
+  buildInputs = [ ocaml findlib ocamlbuild ];
 
   createFindlibDestdir = true;
 
@@ -27,6 +27,6 @@ stdenv.mkDerivation {
     homepage = https://github.com/Chris00/ocaml-csv;
     license = licenses.lgpl21;
     maintainers = [ maintainers.vbgl ];
-    platforms = ocaml.meta.platforms;
+    platforms = ocaml.meta.platforms or [];
   };
 }

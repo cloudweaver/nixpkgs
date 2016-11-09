@@ -1,27 +1,31 @@
-{ stdenv, fetchurl, iproute, lzo, openssl, pam, systemd, pkgconfig }:
+{ stdenv, fetchurl, iproute, lzo, openssl, pam, systemd, pkgconfig
+, pkcs11Support ? false, pkcs11helper ? null,
+}:
+
+assert pkcs11Support -> (pkcs11helper != null);
 
 with stdenv.lib;
 
 stdenv.mkDerivation rec {
-  name = "openvpn-2.3.8";
+  name = "openvpn-2.3.12";
 
   src = fetchurl {
     url = "http://swupdate.openvpn.net/community/releases/${name}.tar.gz";
-    sha256 = "0lbw22qv3m0axhs13razr6b4x1p7jcpvf9rzb15b850wyvpka92k";
+    sha256 = "1zqwq19xg6yf90nv35yr8r0ljas5f42v4n9hjjmhlnzpan69plzm";
   };
 
   patches = optional stdenv.isLinux ./systemd-notify.patch;
 
   buildInputs = [ lzo openssl pkgconfig ]
-                  ++ optionals stdenv.isLinux [ pam systemd iproute ];
+                  ++ optionals stdenv.isLinux [ pam systemd iproute ]
+                  ++ optional pkcs11Support pkcs11helper;
 
-  configureFlags = ''
-    --enable-password-save
-  '' + optionalString stdenv.isLinux ''
-    --enable-systemd
-    --enable-iproute2
-    IPROUTE=${iproute}/sbin/ip
-  '';
+  configureFlags = optionals stdenv.isLinux [
+    "--enable-systemd"
+    "--enable-iproute2"
+    "IPROUTE=${iproute}/sbin/ip" ]
+    ++ optional pkcs11Support "--enable-pkcs11"
+    ++ optional stdenv.isDarwin "--disable-plugin-auth-pam";
 
   postInstall = ''
     mkdir -p $out/share/doc/openvpn/examples
@@ -32,13 +36,11 @@ stdenv.mkDerivation rec {
 
   enableParallelBuilding = true;
 
-  NIX_LDFLAGS = optionalString stdenv.isLinux "-lsystemd-daemon"; # hacky
-
   meta = {
     description = "A robust and highly flexible tunneling application";
     homepage = http://openvpn.net/;
     license = stdenv.lib.licenses.gpl2;
     maintainers = [ stdenv.lib.maintainers.viric ];
-    platforms = stdenv.lib.platforms.linux;
+    platforms = stdenv.lib.platforms.unix;
   };
 }

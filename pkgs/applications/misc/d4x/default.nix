@@ -1,4 +1,4 @@
-{ stdenv, fetchurl, gtk, glib, pkgconfig, openssl, boost }:
+{ stdenv, fetchurl, gtk2, glib, pkgconfig, openssl, boost }:
 
 stdenv.mkDerivation {
   name = "d4x-2.5.7.1";
@@ -6,11 +6,11 @@ stdenv.mkDerivation {
   inherit boost;
 
   src = fetchurl {
-    url =  http://d4x.krasu.ru/files/d4x-2.5.7.1.tar.bz2;
+    url = http://pkgs.fedoraproject.org/repo/pkgs/d4x/d4x-2.5.7.1.tar.bz2/68d6336c3749a7caabb0f5a5f84f4102/d4x-2.5.7.1.tar.bz2;
     sha256 = "1i1jj02bxynisqapv31481sz9jpfp3f023ky47spz1v1wlwbs13m";
   };
 
-  buildInputs = [ gtk glib pkgconfig openssl boost ];
+  buildInputs = [ gtk2 glib pkgconfig openssl boost ];
 
   meta = {
     description = "Graphical download manager";

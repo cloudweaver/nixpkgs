@@ -16,11 +16,11 @@ with stdenv.lib.strings;
 
 let
 
-  version = "2.0-a41";
+  version = "2.0.a51";
 
   src = fetchurl {
-    url = "mirror://sourceforge/project/faudiostream/faust-2.0.a41.tgz";
-    sha256 = "1cq4x1cax0lswrcqv0limx5mjdi3187zlmh7cj2pndr0xq6b96cm";
+    url = "mirror://sourceforge/project/faudiostream/faust-${version}.tgz";
+    sha256 = "1yryjqfqmxs7lxy95hjgmrncvl9kig3rcsmg0v49ghzz7vs7haxf";
   };
 
   meta = with stdenv.lib; {
@@ -37,7 +37,8 @@ let
 
     inherit src;
 
-    buildInputs = [ makeWrapper llvm emscripten openssl libsndfile pkgconfig libmicrohttpd vim ];
+    nativeBuildInputs = [ makeWrapper pkgconfig vim ];
+    buildInputs = [ llvm emscripten openssl libsndfile libmicrohttpd ];
 
 
     passthru = {
@@ -52,7 +53,21 @@ let
       # defines 'system' env var, so undefine that so faust detects the
       # correct system.
       unset system
-      sed -e "232s/LLVM_STATIC_LIBS/LLVMLIBS/" -i compiler/Makefile.unix
+      # sed -e "232s/LLVM_STATIC_LIBS/LLVMLIBS/" -i compiler/Makefile.unix
+
+      # The makefile sets LLVM_<version> depending on the current llvm
+      # version, but the detection code is quite brittle.
+      #
+      # Failing to properly detect the llvm version means that the macro
+      # LLVM_VERSION ends up being the raw output of `llvm-config --version`, while
+      # the code assumes that it's set to a symbol like `LLVM_35`.  Two problems result:
+      # * <command-line>:0:1: error: macro names must be identifiers.; and
+      # * a bunch of undefined reference errors due to conditional definitions relying on
+      #   LLVM_XY being defined.
+      #
+      # For now, fix this by 1) pinning the llvm version; 2) manually setting LLVM_VERSION
+      # to something the makefile will recognize.
+      sed '52iLLVM_VERSION=3.8.0' -i compiler/Makefile.unix
     '';
 
     # Remove most faust2appl scripts since they won't run properly
@@ -117,9 +132,7 @@ let
 
       inherit src;
 
-      configurePhase = ":";
-
-      buildPhase = ":";
+      dontBuild = true;
 
       installPhase = ''
         runHook preInstall
@@ -138,7 +151,8 @@ let
         for script in "$out"/bin/*; do
           substituteInPlace "$script" \
             --replace ". faustpath" ". '${faust}/bin/faustpath'" \
-            --replace ". faustoptflags" ". '${faust}/bin/faustoptflags'"
+            --replace ". faustoptflags" ". '${faust}/bin/faustoptflags'" \
+            --replace " error " "echo"
         done
       '';
 
@@ -180,11 +194,13 @@ let
         # export parts of the build environment
         for script in "$out"/bin/*; do
           wrapProgram "$script" \
+            --set FAUSTLIB "${faust}/lib/faust" \
             --set FAUST_LIB_PATH "${faust}/lib/faust" \
+            --set FAUSTINC "${faust}/include/faust" \
             --prefix PATH : "$PATH" \
             --prefix PKG_CONFIG_PATH : "$PKG_CONFIG_PATH" \
-            --set NIX_CFLAGS_COMPILE "\"$NIX_CFLAGS_COMPILE\"" \
-            --set NIX_LDFLAGS "\"$NIX_LDFLAGS\""
+            --set NIX_CFLAGS_COMPILE "$NIX_CFLAGS_COMPILE" \
+            --set NIX_LDFLAGS "$NIX_LDFLAGS"
         done
       '';
     });

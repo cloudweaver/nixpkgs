@@ -1,7 +1,7 @@
 { stdenv, fetchurl, gtk2, which, pkgconfig, intltool, file }:
 
 let
-  version = "1.26";
+  version = "1.28";
 in
 
 stdenv.mkDerivation rec {
@@ -9,8 +9,10 @@ stdenv.mkDerivation rec {
 
   src = fetchurl {
     url = "http://download.geany.org/${name}.tar.bz2";
-    sha256 = "e38530e87c577e1e9806be3b40e08fb9ee321eb1abc6361ddacdad89c825f90d";
+    sha256 = "0nha21rbdhl10vdpaq8d5v5fszvggl1xar555pvrnvm2y443ffpp";
   };
+
+  NIX_LDFLAGS = if stdenv.isDarwin then "-lintl" else null;
 
   buildInputs = [ gtk2 which pkgconfig intltool file ];
 

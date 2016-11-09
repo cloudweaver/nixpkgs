@@ -3,7 +3,7 @@
 , enablePepperFlash ? false
 , enableWideVine ? false
 
-, source
+, upstream-info
 }:
 
 with stdenv.lib;
@@ -40,16 +40,16 @@ let
   plugins = stdenv.mkDerivation {
     name = "chromium-binary-plugins";
 
-    # XXX: Only temporary and has to be version-specific
-    src = source.plugins;
+    src = upstream-info.binary;
 
     phases = [ "unpackPhase" "patchPhase" "installPhase" "checkPhase" ];
     outputs = [ "flash" "widevine" ];
+    out = "flash"; # outputs TODO: is this a hack?
 
     unpackCmd = let
-      chan = if source.channel == "dev"    then "chrome-unstable"
-        else if source.channel == "stable" then "chrome"
-        else "chrome-${source.channel}";
+      chan = if upstream-info.channel == "dev"    then "chrome-unstable"
+        else if upstream-info.channel == "stable" then "chrome"
+        else "chrome-${upstream-info.channel}";
     in ''
       mkdir -p plugins
       ar p "$src" data.tar.xz | tar xJ -C plugins --strip-components=4 \
@@ -65,7 +65,7 @@ let
 
     patchPhase = let
       rpaths = [ stdenv.cc.cc ];
-      mkrpath = p: "${makeSearchPath "lib64" p}:${makeSearchPath "lib" p}";
+      mkrpath = p: "${makeSearchPathOutput "lib" "lib64" p}:${makeLibraryPath p}";
     in ''
       for sofile in PepperFlash/libpepflashplayer.so \
                     libwidevinecdm.so libwidevinecdmadapter.so; do
@@ -84,7 +84,9 @@ let
       wvModule = "@widevine@/lib/libwidevinecdmadapter.so";
       wvInfo = "#${wvName}#${wvDescription};${wvMimeTypes}";
     in ''
-      flashVersion="$(${jshon}/bin/jshon -F PepperFlash/manifest.json -e version -u)"
+      flashVersion="$(
+        "${jshon}/bin/jshon" -F PepperFlash/manifest.json -e version -u
+      )"
 
       install -vD PepperFlash/libpepflashplayer.so \
         "$flash/lib/libpepflashplayer.so"

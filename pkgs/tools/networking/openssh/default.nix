@@ -2,11 +2,13 @@
 , etcDir ? null
 , hpnSupport ? false
 , withKerberos ? false
-, withGssapiPatches ? withKerberos
+, withGssapiPatches ? false
 , kerberos
+, linkOpenssl? true
 }:
 
 assert withKerberos -> kerberos != null;
+assert withGssapiPatches -> withKerberos;
 
 let
 
@@ -15,19 +17,23 @@ let
     sha256 = "682b4a6880d224ee0b7447241b684330b731018585f1ba519f46660c10d63950";
   };
 
+  # **please** update this patch when you update to a new openssh release.
   gssapiSrc = fetchpatch {
-    url = "http://anonscm.debian.org/cgit/pkg-ssh/openssh.git/plain/debian/patches/gssapi.patch?h=debian/7.1p2-2";
-    sha256 = "05nsch879nlpyyiwm240wlq9rasy71j9d03j1rfi8kp865zhjfbm";
+    url = "https://anonscm.debian.org/cgit/pkg-ssh/openssh.git/plain/debian/patches/gssapi.patch?id=477bb7636238c106f8cd7c868a8c0c5eabcfb3db";
+    sha256 = "1kcx2rw6z7y591vr60ww2m2civ0cx6f6awdpi66p1sric9b65si3";
   };
 
 in
 with stdenv.lib;
 stdenv.mkDerivation rec {
-  name = "openssh-7.1p2";
+  # Please ensure that openssh_with_kerberos still builds when
+  # bumping the version here!
+  name = "openssh-${version}";
+  version = "7.3p1";
 
   src = fetchurl {
     url = "mirror://openbsd/OpenSSH/portable/${name}.tar.gz";
-    sha256 = "1gbbvszz74lkc7b2mqr3ccgpm65zj0k5h7a2ssh0c7pjvhjg0xfx";
+    sha256 = "1k5y1wi29d47cgizbryxrhc1fbjsba2x8l5mqfa9b9nadnd9iyrz";
   };
 
   prePatch = optionalString hpnSupport
@@ -37,23 +43,24 @@ stdenv.mkDerivation rec {
     '';
 
   patches =
-    [ ./locale_archive.patch
+    [
+      ./RH-1380296-NEWKEYS-null-pointer-deref.patch
+      ./locale_archive.patch
+      ./fix-host-key-algorithms-plus.patch
 
-      # Fix "HostKeyAlgoritms +...", which we need to enable DSA
-      # host key support.
-      (fetchurl {
-        url = "https://pkgs.fedoraproject.org/cgit/rpms/openssh.git/plain/openssh-7.1p1-hostkeyalgorithms.patch?id=c98f5597250d6f9a8e8d96960beb6306d150ef0f";
-        sha256 = "029lzp9qv1af8wdm0wwj7qwjj1nimgsjj214jqm3amwz0857qgvp";
-      })
+      # See discussion in https://github.com/NixOS/nixpkgs/pull/16966
+      ./dont_create_privsep_path.patch
+      ./fix-CVE-2016-8858.patch
     ]
     ++ optional withGssapiPatches gssapiSrc;
 
   buildInputs = [ zlib openssl libedit pkgconfig pam ]
-    ++ optional withKerberos [ kerberos ];
+    ++ optional withKerberos kerberos;
 
   # I set --disable-strip because later we strip anyway. And it fails to strip
   # properly when cross building.
   configureFlags = [
+    "--sbindir=\${out}/bin"
     "--localstatedir=/var"
     "--with-pid-dir=/run"
     "--with-mantype=man"
@@ -62,14 +69,12 @@ stdenv.mkDerivation rec {
     (if pam != null then "--with-pam" else "--without-pam")
   ] ++ optional (etcDir != null) "--sysconfdir=${etcDir}"
     ++ optional withKerberos "--with-kerberos5=${kerberos}"
-    ++ optional stdenv.isDarwin "--disable-libutil";
-
-  preConfigure = ''
-    configureFlagsArray+=("--with-privsep-path=$out/empty")
-    mkdir -p $out/empty
-  '';
+    ++ optional stdenv.isDarwin "--disable-libutil"
+    ++ optional (!linkOpenssl) "--without-openssl";
 
   enableParallelBuilding = true;
+
+  hardeningEnable = [ "pie" ];
 
   postInstall = ''
     # Install ssh-copy-id, it's very useful.
@@ -84,11 +89,11 @@ stdenv.mkDerivation rec {
   ];
 
   meta = {
-    homepage = "http://www.openssh.org/";
+    homepage = "http://www.openssh.com/";
     description = "An implementation of the SSH protocol";
     license = stdenv.lib.licenses.bsd2;
     platforms = platforms.unix;
-    maintainers = with maintainers; [ eelco ];
+    maintainers = with maintainers; [ eelco aneeshusa ];
     broken = hpnSupport; # probably after 6.7 update
   };
 }

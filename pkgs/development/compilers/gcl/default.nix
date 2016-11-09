@@ -16,6 +16,11 @@ stdenv.mkDerivation rec {
     url = "http://gnu.spinellicreations.com/gcl/${name}.tar.gz";
   };
 
+  patches = [(fetchurl {
+    url = https://gitweb.gentoo.org/repo/gentoo.git/plain/dev-lisp/gcl/files/gcl-2.6.12-gcc5.patch;
+    sha256 = "00jbsn0qp8ki2w7dx8caha7g2hr9076xa6bg48j3qqqncff93zdh";
+  })];
+
   buildInputs = [
     mpfr m4 binutils emacs gmp
     libX11 xproto inputproto libXi
@@ -27,22 +32,9 @@ stdenv.mkDerivation rec {
     "--enable-ansi"
   ];
 
-  # Upstream bug submitted - http://savannah.gnu.org/bugs/index.php?30371
-  # $TMPDIR must have no extension
-  # setVars = a.noDepEntry ''
-  #   export TMPDIR="''${TMPDIR:-''${TMP:-''${TEMP}}}/tmp-for-gcl"
-  #   mkdir -p "$TMPDIR"
-  # '';
+  hardeningDisable = [ "pic" "bindnow" ];
 
-  preBuild = ''
-    # sed -re "s@/bin/cat@$(which cat)@g" -i configure */configure
-    # sed -re "s@if test -d /proc/self @if false @" -i configure
-    # sed -re 's^([ \t])cpp ^\1cpp -I${stdenv.cc.cc}/include -I${stdenv.cc.libc}/include ^g' -i makefile
-  '';
-
-  /* doConfigure should be removed if not needed */
-  # phaseNames = ["setVars" "doUnpack" "preBuild"
-  #   "doConfigure" "doMakeInstall"];
+  NIX_CFLAGS_COMPILE = "-fgnu89-inline";
 
   meta = {
     description = "GNU Common Lisp compiler working via GCC";

@@ -1,5 +1,5 @@
 { stdenv, fetchurl, ghc, pkgconfig, glibcLocales, coreutils, gnugrep, gnused
-, jailbreak-cabal, hscolour, cpphs
+, jailbreak-cabal, hscolour, cpphs, nodePackages
 }:
 
 { pname
@@ -7,7 +7,7 @@
 , version, revision ? null
 , sha256 ? null
 , src ? fetchurl { url = "mirror://hackage/${pname}-${version}.tar.gz"; inherit sha256; }
-, buildDepends ? [], libraryHaskellDepends ? [], executableHaskellDepends ? []
+, buildDepends ? [], setupHaskellDepends ? [], libraryHaskellDepends ? [], executableHaskellDepends ? []
 , buildTarget ? ""
 , buildTools ? [], libraryToolDepends ? [], executableToolDepends ? [], testToolDepends ? []
 , configureFlags ? []
@@ -47,6 +47,7 @@
 , shellHook ? ""
 , coreSetup ? false # Use only core packages to build Setup.hs.
 , useCpphs ? false
+, hardeningDisable ? []
 } @ args:
 
 assert editedCabalFile != null -> revision != null;
@@ -120,7 +121,7 @@ let
                         optionals doCheck testPkgconfigDepends;
 
   propagatedBuildInputs = buildDepends ++ libraryHaskellDepends ++ executableHaskellDepends;
-  otherBuildInputs = extraLibraries ++ librarySystemDepends ++ executableSystemDepends ++
+  otherBuildInputs = extraLibraries ++ librarySystemDepends ++ executableSystemDepends ++ setupHaskellDepends ++
                      buildTools ++ libraryToolDepends ++ executableToolDepends ++
                      optionals (allPkgconfigDepends != []) ([pkgconfig] ++ allPkgconfigDepends) ++
                      optionals doCheck (testDepends ++ testHaskellDepends ++ testSystemDepends ++ testToolDepends);
@@ -193,6 +194,9 @@ stdenv.mkDerivation ({
       fi
       if [ -d "$p/lib" ]; then
         configureFlags+=" --extra-lib-dirs=$p/lib"
+        ${ stdenv.lib.optionalString stdenv.isDarwin
+            "export DYLD_LIBRARY_PATH=$DYLD_LIBRARY_PATH:$p/lib"
+        }
       fi
     done
     ${ghcCommand}-pkg --${packageDbFlag}="$packageConfDir" recache
@@ -282,7 +286,8 @@ stdenv.mkDerivation ({
 
     env = stdenv.mkDerivation {
       name = "interactive-${pname}-${version}-environment";
-      nativeBuildInputs = [ ghcEnv systemBuildInputs ];
+      nativeBuildInputs = [ ghcEnv systemBuildInputs ]
+        ++ optional isGhcjs ghc."socket.io"; # for ghcjsi
       LANG = "en_US.UTF-8";
       LOCALE_ARCHIVE = optionalString stdenv.isLinux "${glibcLocales}/lib/locale/locale-archive";
       shellHook = ''
@@ -325,5 +330,6 @@ stdenv.mkDerivation ({
 // optionalAttrs (preFixup != "")       { inherit preFixup; }
 // optionalAttrs (postFixup != "")      { inherit postFixup; }
 // optionalAttrs (dontStrip)            { inherit dontStrip; }
+// optionalAttrs (hardeningDisable != []) { inherit hardeningDisable; }
 // optionalAttrs (stdenv.isLinux)       { LOCALE_ARCHIVE = "${glibcLocales}/lib/locale/locale-archive"; }
 )

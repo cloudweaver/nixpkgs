@@ -99,7 +99,7 @@
 , libxcbshapeExtlib ? true # X11 grabbing shape rendering
 , libXv ? null # Xlib support
 , lzma ? null # xz-utils
-#, nvenc ? null # NVIDIA NVENC support
+, nvenc ? false, nvidia-video-sdk ? null # NVIDIA NVENC support
 , openal ? null # OpenAL 1.1 capture support
 #, opencl ? null # OpenCL code
 #, opencore-amr ? null # AMR-NB de/encoder & AMR-WB decoder
@@ -141,7 +141,8 @@
 /*
  *  Darwin frameworks
  */
-, Cocoa, CoreServices
+, Cocoa, CoreAudio, CoreServices, AVFoundation, MediaToolbox
+, VideoDecodeAcceleration, CF
 }:
 
 /* Maintainer notes:
@@ -177,7 +178,7 @@
 
 let
   inherit (stdenv) isCygwin isFreeBSD isLinux;
-  inherit (stdenv.lib) optional optionals enableFeature;
+  inherit (stdenv.lib) optional optionals optionalString enableFeature;
 in
 
 /*
@@ -232,17 +233,21 @@ assert libxcbshapeExtlib -> libxcb != null;
 assert openglExtlib -> mesa != null;
 assert opensslExtlib -> gnutls == null && openssl != null && nonfreeLicensing;
 assert x11grabExtlib -> libX11 != null && libXv != null;
+assert nvenc -> nvidia-video-sdk != null && nonfreeLicensing;
 
 stdenv.mkDerivation rec {
   name = "ffmpeg-full-${version}";
-  version = "2.8.5";
+  version = "3.1.3";
 
   src = fetchurl {
-    url = "https://www.ffmpeg.org/releases/ffmpeg-${version}.tar.bz2";
-    sha256 = "0nk1j3i7qc1k3dygpq74pxq382vqg9kaf2hxl9jfw8rkad8rjv9v";
+    url = "https://www.ffmpeg.org/releases/ffmpeg-${version}.tar.xz";
+    sha256 = "08l8290gipm632dhrqndnphdpkc5ncqc1j3hxdx46r1a3q3mqmzq";
   };
 
-  patchPhase = ''patchShebangs .'';
+  patchPhase = ''patchShebangs .
+  '' + stdenv.lib.optionalString stdenv.isDarwin ''
+    sed -i 's/#ifndef __MAC_10_11/#if 1/' ./libavcodec/audiotoolboxdec.c
+  '';
 
   configureFlags = [
     /*
@@ -356,7 +361,7 @@ stdenv.mkDerivation rec {
     (enableFeature libxcbxfixesExtlib "libxcb-xfixes")
     (enableFeature libxcbshapeExtlib "libxcb-shape")
     (enableFeature (lzma != null) "lzma")
-    #(enableFeature nvenc "nvenc")
+    (enableFeature nvenc "nvenc")
     (enableFeature (openal != null) "openal")
     #(enableFeature opencl "opencl")
     #(enableFeature (opencore-amr != null && version3Licensing) "libopencore-amrnb")
@@ -410,11 +415,26 @@ stdenv.mkDerivation rec {
     ++ optionals nonfreeLicensing [ faac fdk_aac openssl ]
     ++ optional ((isLinux || isFreeBSD) && libva != null) libva
     ++ optionals isLinux [ alsaLib libraw1394 libv4l ]
-    ++ optionals stdenv.isDarwin [ Cocoa CoreServices ];
+    ++ optionals nvenc [ nvidia-video-sdk ]
+    ++ optionals stdenv.isDarwin [ Cocoa CoreServices CoreAudio AVFoundation 
+                                   MediaToolbox VideoDecodeAcceleration ];
 
   # Build qt-faststart executable
   buildPhase = optional qtFaststartProgram ''make tools/qt-faststart'';
-  postInstall = optional qtFaststartProgram ''cp -a tools/qt-faststart $out/bin/'';
+
+  # Hacky framework patching technique borrowed from the phantomjs2 package
+  postInstall = optionalString qtFaststartProgram ''
+    cp -a tools/qt-faststart $out/bin/
+  '' + optionalString stdenv.isDarwin ''
+    FILES=($(ls $out/bin/*))
+    FILES+=($(ls $out/lib/*.dylib))
+    for f in ''${FILES[@]}; do
+      if [ ! -h "$f" ]; then
+        install_name_tool -change ${CF}/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation /System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation "$f"
+      fi
+    done
+  '';
+
 
   enableParallelBuilding = true;
 
@@ -449,7 +469,7 @@ stdenv.mkDerivation rec {
 
   meta = with stdenv.lib; {
     description = "A complete, cross-platform solution to record, convert and stream audio and video";
-    homepage = http://www.ffmpeg.org/;
+    homepage = https://www.ffmpeg.org/;
     longDescription = ''
       FFmpeg is the leading multimedia framework, able to decode, encode, transcode, 
       mux, demux, stream, filter and play pretty much anything that humans and machines 

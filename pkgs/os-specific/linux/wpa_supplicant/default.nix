@@ -4,13 +4,13 @@
 
 with stdenv.lib;
 stdenv.mkDerivation rec {
-  version = "2.5";
+  version = "2.6";
 
   name = "wpa_supplicant-${version}";
 
   src = fetchurl {
     url = "http://hostap.epitest.fi/releases/${name}.tar.gz";
-    sha256 = "05mkp5bx1c3z7h5biddsv0p49gkrq9ksany3anp4wdiv92p5prfc";
+    sha256 = "0l0l5gz3d5j9bqjsbjlfcv4w4jwndllp9fmyai4x9kg6qhs6v4xl";
   };
 
   # TODO: Patch epoll so that the dbus actually responds
@@ -69,7 +69,7 @@ stdenv.mkDerivation rec {
     cat -n .config
     substituteInPlace Makefile --replace /usr/local $out
     export NIX_CFLAGS_COMPILE="$NIX_CFLAGS_COMPILE \
-      -I$(echo "${libnl}"/include/libnl*/) \
+      -I$(echo "${libnl.dev}"/include/libnl*/) \
       -I${pcsclite}/include/PCSC/"
   '';
 
@@ -79,7 +79,6 @@ stdenv.mkDerivation rec {
 
   patches = [
     ./build-fix.patch
-    ./libressl.patch
   ];
 
   postInstall = ''

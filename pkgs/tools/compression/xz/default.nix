@@ -8,12 +8,17 @@ stdenv.mkDerivation rec {
     sha256 = "1da071wyx921pyx3zkxlnbpp14p6km98pnp66mg1arwi9dxgbxbg";
   };
 
+  outputs = [ "bin" "dev" "out" "man" "doc" ];
+
   doCheck = true;
 
   # In stdenv-linux, prevent a dependency on bootstrap-tools.
   preConfigure = "unset CONFIG_SHELL";
 
   postInstall = "rm -rf $out/share/doc";
+
+  # FIXME needs gcc 4.9 in bootstrap tools
+  hardeningDisable = [ "stackprotector" ];
 
   meta = with stdenv.lib; {
     homepage = http://tukaani.org/xz/;

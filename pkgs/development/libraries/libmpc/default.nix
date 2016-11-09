@@ -12,9 +12,12 @@ stdenv.mkDerivation rec {
 
   buildInputs = [ gmp mpfr ];
 
-  CFLAGS = "-I${gmp}/include";
+  CFLAGS = "-I${gmp.dev}/include";
 
   doCheck = true;
+
+  # FIXME needs gcc 4.9 in bootstrap tools
+  hardeningDisable = [ "stackprotector" ];
 
   meta = {
     description = "Library for multiprecision complex arithmetic with exact rounding";

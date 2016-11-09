@@ -1,33 +1,29 @@
-{ stdenv, fetchFromGitHub, coreutils, qt4, texlive }:
+{ stdenv, fetchFromGitHub, coreutils, qtbase, qtdeclarative, qmakeHook, texlive }:
 
-let
-  version = "36.0.0";
-in
-stdenv.mkDerivation {
+stdenv.mkDerivation rec {
   name = "dwarf-therapist-original-${version}";
+  version = "37.0.0";
 
   src = fetchFromGitHub {
     owner = "splintermind";
     repo = "Dwarf-Therapist";
     rev = "v${version}";
-    sha256 = "08xjawb25sibkkfqwd4mlq73dgmgc6lxbbd673rx7yhrsjh4z4h3";
+    sha256 = "0dw86b4x5hjhb7h4ynvwjgcinpqywfc5l48ljb5sahz08rfnx63d";
   };
 
   outputs = [ "out" "layouts" ];
-  buildInputs = [ qt4 ];
-  nativeBuildInputs = [ texlive ];
+  buildInputs = [ qtbase qtdeclarative ];
+  nativeBuildInputs = [ texlive qmakeHook ];
 
   enableParallelBuilding = false;
-
-  configurePhase = ''
-    qmake PREFIX=$out
-  '';
 
   # Move layout files so they cannot be found by Therapist
   postInstall = ''
     mkdir -p $layouts
     mv $out/share/dwarftherapist/memory_layouts/* $layouts
     rmdir $out/share/dwarftherapist/memory_layouts
+    # Useless symlink
+    rm $out/bin/dwarftherapist
   '';
 
   meta = {
@@ -35,6 +31,6 @@ stdenv.mkDerivation {
     maintainers = with stdenv.lib.maintainers; [ the-kenny abbradar ];
     license = stdenv.lib.licenses.mit;
     platforms = stdenv.lib.platforms.linux;
-    homepage = https://code.google.com/r/splintermind-attributes/;
+    homepage = "https://github.com/splintermind/Dwarf-Therapist";
   };
 }

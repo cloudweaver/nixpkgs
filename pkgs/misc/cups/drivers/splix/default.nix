@@ -14,11 +14,11 @@ stdenv.mkDerivation rec {
     makeFlags="V=1 DISABLE_JBIG=1 CUPSFILTER=$out/lib/cups/filter CUPSPPD=$out/share/cups/model"
   '';
 
-  buildInputs = [ cups zlib ];
+  buildInputs = [cups zlib];
 
   meta = {
     homepage = http://splix.sourceforge.net;
     platforms = stdenv.lib.platforms.linux;
-    maintainers = [ stdenv.lib.maintainers.simons ];
+    maintainers = [ stdenv.lib.maintainers.peti ];
   };
 }

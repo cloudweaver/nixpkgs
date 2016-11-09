@@ -1,20 +1,26 @@
-{ stdenv, fetchurl, pythonPackages, python} :
+{ stdenv, fetchurl, pythonPackages, glibcLocales} :
 
 pythonPackages.buildPythonApplication rec {
   name = "devpi-client-${version}";
-  version = "2.3.2";
+  version = "2.7.0";
 
   src = fetchurl {
-    url = "https://pypi.python.org/packages/source/d/devpi-client/devpi-client-${version}.tar.gz";
-    md5= "bfc8cd768f983fd0585c347bca00c8bb";
+    url = "mirror://pypi/d/devpi-client/${name}.tar.gz";
+    sha256 = "0z7vaf0a66n82mz0vx122pbynjvkhp2mjf9lskgyv09y3bxzzpj3";
   };
 
-  buildInputs = [ pythonPackages.tox pythonPackages.check-manifest pythonPackages.devpi-common pythonPackages.pkginfo ];
+  doCheck = false;
+
+  LC_ALL = "en_US.UTF-8";
+  buildInputs = with pythonPackages; [ glibcLocales tox check-manifest pkginfo ];
+
+  propagatedBuildInputs = with pythonPackages; [ py devpi-common ];
+
   meta = {
     homepage = http://doc.devpi.net;
     description = "Github-style pypi index server and packaging meta tool";
     license = stdenv.lib.licenses.mit;
-    maintainers = [stdenv.lib.maintainers.lewo];
+    maintainers = with stdenv.lib.maintainers; [ lewo makefu ];
 
   };
 }

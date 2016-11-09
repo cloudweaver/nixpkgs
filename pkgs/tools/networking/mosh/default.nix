@@ -1,22 +1,22 @@
-{ stdenv, fetchurl, zlib, boost, protobuf, ncurses, pkgconfig, IOTty
-, makeWrapper, perl, openssl }:
+{ stdenv, fetchurl, zlib, protobuf, ncurses, pkgconfig, IOTty
+, makeWrapper, perl, openssl, autoreconfHook, fetchpatch }:
 
 stdenv.mkDerivation rec {
-  name = "mosh-1.2.5";
+  name = "mosh-1.2.6";
 
   src = fetchurl {
-    url = "http://mosh.mit.edu/${name}.tar.gz";
-    sha256 = "1qsb0y882yfgwnpy6f98pi5xqm6kykdsrxzvaal37hs7szjhky0s";
+    url = "https://mosh.org/${name}.tar.gz";
+    sha256 = "118fhpm754wpklf1blnlq5xbvrxqml6rdfs3b07wg666zkxvg0ky";
   };
 
-  buildInputs = [ boost protobuf ncurses zlib pkgconfig IOTty makeWrapper perl openssl ];
+  buildInputs = [ autoreconfHook protobuf ncurses zlib pkgconfig IOTty makeWrapper perl openssl ];
 
   postInstall = ''
       wrapProgram $out/bin/mosh --prefix PERL5LIB : $PERL5LIB
   '';
 
   meta = {
-    homepage = http://mosh.mit.edu/;
+    homepage = https://mosh.org/;
     description = "Mobile shell (ssh replacement)";
     longDescription = ''
       Remote terminal application that allows roaming, supports intermittent

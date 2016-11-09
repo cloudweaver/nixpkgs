@@ -1,19 +1,20 @@
-{ stdenv, fetchurl, openssl }:
+{ stdenv, fetchFromGitHub, openssl }:
 
 stdenv.mkDerivation rec {
   name = "sslscan-${version}";
-  version = "1.11.0";
+  version = "1.11.7";
 
-  src = fetchurl {
-    url = "https://github.com/rbsec/sslscan/archive/${version}-rbsec.tar.gz";
-    sha256 = "19d6vpcihfqs35hni4vigcpqabbnd3sndr5wyvfsladgp40vz3b9";
+  src = fetchFromGitHub {
+    owner = "rbsec";
+    repo = "sslscan";
+    rev = "${version}-rbsec";
+    sha256 = "007lf3rxcn9nz6jrki3mavgd9sd2hmm9nzp2g13h0ri51yc3bkp0";
   };
 
   buildInputs = [ openssl ];
 
   installFlags = [
-    "BINPATH=$(out)/bin"
-    "MANPATH=$(out)/share/man"
+    "PREFIX=$(out)"
   ];
 
   meta = with stdenv.lib; {
@@ -24,4 +25,3 @@ stdenv.mkDerivation rec {
     platforms = platforms.all;
   };
 }
-

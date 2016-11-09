@@ -3,11 +3,12 @@
 }:
 
 stdenv.mkDerivation rec {
-  name = "global-6.5.2";
+  name = "global-${version}";
+  version = "6.5.5";
 
   src = fetchurl {
     url = "mirror://gnu/global/${name}.tar.gz";
-    sha256 = "07qx3dbjwkbd1dn42qs7zgj77rxdj2psfrf7bx7yx9al38f87z60";
+    sha256 = "0yyg91qw8399lnxfai4bxkh9yq71qdwp9kvadgzp05cdqni44nxw";
   };
 
   nativeBuildInputs = [ libtool makeWrapper ];
@@ -18,9 +19,9 @@ stdenv.mkDerivation rec {
 
   configureFlags = [
     "--with-ltdl-include=${libtool}/include"
-    "--with-ltdl-lib=${libtool}/lib"
-    "--with-ncurses=${ncurses}"
-    "--with-sqlite3=${sqlite}"
+    "--with-ltdl-lib=${libtool.lib}/lib"
+    "--with-ncurses=${ncurses.dev}"
+    "--with-sqlite3=${sqlite.dev}"
     "--with-exuberant-ctags=${ctags}/bin/ctags"
     "--with-posix-sort=${coreutils}/bin/sort"
   ];
@@ -51,7 +52,7 @@ stdenv.mkDerivation rec {
     '';
     homepage = http://www.gnu.org/software/global/;
     license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ pSub ];
+    maintainers = with maintainers; [ pSub peterhoeg ];
     platforms = platforms.unix;
   };
 }

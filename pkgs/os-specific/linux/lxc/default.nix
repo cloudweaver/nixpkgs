@@ -1,4 +1,4 @@
-{ stdenv, fetchurl, autoreconfHook, pkgconfig, perl, docbook2x
+{ stdenv, fetchurl, fetchpatch, autoreconfHook, pkgconfig, perl, docbook2x
 , docbook_xml_dtd_45, python3Packages
 
 # Optional Dependencies
@@ -12,11 +12,11 @@ in
 with stdenv.lib;
 stdenv.mkDerivation rec {
   name = "lxc-${version}";
-  version = "1.1.4";
+  version = "2.0.4";
 
   src = fetchurl {
     url = "https://linuxcontainers.org/downloads/lxc/lxc-${version}.tar.gz";
-    sha256 = "1p75ff4lnkm7hq26zq09nqbdypl508csk0ix024l7j8v02i2w1wg";
+    sha256 = "10lm7vfw4j7arcynmgyjqd8v2fqn7spbablj42j26kmzljcydj8l";
   };
 
   nativeBuildInputs = [
@@ -27,14 +27,15 @@ stdenv.mkDerivation rec {
     python3Packages.python systemd
   ];
 
-  patches = [ ./support-db2x.patch ];
+  patches = [
+    ./support-db2x.patch
+  ];
 
   XML_CATALOG_FILES = "${docbook_xml_dtd_45}/xml/dtd/docbook/catalog.xml";
 
   configureFlags = [
     "--localstatedir=/var"
     "--sysconfdir=/etc"
-    "--enable-doc"
     "--disable-api-docs"
     "--with-init-script=none"
     "--with-distro=nixos" # just to be sure it is "unknown"
@@ -67,7 +68,7 @@ stdenv.mkDerivation rec {
 
   meta = {
     homepage = "http://lxc.sourceforge.net";
-    description = "userspace tools for Linux Containers, a lightweight virtualization system";
+    description = "Userspace tools for Linux Containers, a lightweight virtualization system";
     license = licenses.lgpl21Plus;
 
     longDescription = ''
@@ -79,6 +80,6 @@ stdenv.mkDerivation rec {
     '';
 
     platforms = platforms.linux;
-    maintainers = with maintainers; [ simons wkennington globin ];
+    maintainers = with maintainers; [ wkennington globin fpletz ];
   };
 }

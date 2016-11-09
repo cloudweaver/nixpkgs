@@ -12,12 +12,13 @@ with stdenv.lib;
 
 stdenv.mkDerivation rec {
   name = "nano-${version}";
-  version = "2.5.0";
+  version = "2.7.1";
   src = fetchurl {
-    url = "mirror://gnu/nano/${name}.tar.gz";
-    sha256 = "1vl9bim56k1b4zwc3icxp46w6pn6gb042j1h4jlz1jklxxpkwcpz";
+    url = "mirror://gnu/nano/${name}.tar.xz";
+    sha256 = "1kapx0fyp0a0pvsdd1n59pm3acrimdrp7ciglg098wqxhdlvwp6z";
   };
-  buildInputs = [ ncurses texinfo ] ++ optional enableNls gettext;
+  nativeBuildInputs = [ texinfo ] ++ optional enableNls gettext;
+  buildInputs = [ ncurses ];
   outputs = [ "out" "info" ];
   configureFlags = ''
     --sysconfdir=/etc
@@ -33,7 +34,10 @@ stdenv.mkDerivation rec {
     homepage = http://www.nano-editor.org/;
     description = "A small, user-friendly console text editor";
     license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ joachifm ];
+    maintainers = with maintainers; [
+      jgeerds
+      joachifm
+    ];
     platforms = platforms.all;
   };
 }

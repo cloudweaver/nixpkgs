@@ -20,7 +20,7 @@ stdenv.mkDerivation {
   preConfigure =
     ''
       cd src
-      sed -i "s@^CFLAGS.*\$@&\nCFLAGS += -I${libXpm}/include/X11@" tk/makefile
+      sed -i "s@^CFLAGS.*\$@&\nCFLAGS += -I${libXpm.dev}/include/X11@" tk/makefile
       sed -i "s@^INCLUDES.*\$@&\n\t-I$PWD/tcl \\\\@" sim/makefile
     '';
 
@@ -33,8 +33,8 @@ stdenv.mkDerivation {
         cp -R $d $out/usr/share/games/micropolis
       done
       cp Micropolis $out/usr/share/games/micropolis
-      cat > $out/bin/micropolis << EOF 
-      #!/bin/bash
+      cat > $out/bin/micropolis << EOF
+      #!${stdenv.shell}
       cd $out/usr/share/games/micropolis
       ./Micropolis
       EOF

@@ -1,24 +1,28 @@
-{ stdenv, fetchurl, pkgconfig, gtk, perl, python, gettext
-, libtool, pciutils, dbus_glib, libcanberra, libproxy
+{ stdenv, fetchurl, pkgconfig, gtk2, lua, perl, python
+, libtool, pciutils, dbus_glib, libcanberra_gtk2, libproxy
 , libsexy, enchant, libnotify, openssl, intltool
 , desktop_file_utils, hicolor_icon_theme
 }:
 
 stdenv.mkDerivation rec {
-  version = "2.10.2";
+  version = "2.12.3";
   name = "hexchat-${version}";
 
   src = fetchurl {
     url = "http://dl.hexchat.net/hexchat/${name}.tar.xz";
-    sha256 = "0b5mw6jxa7c93nbgiwijm7j7klm6nccx6l9zyainyrbnqmjz7sw7";
+    sha256 = "1fpj2kk1p85snffchqxsz3sphhcgiripjw41mgzxi7ks5hvj4avg";
   };
 
-  buildInputs = [
-    pkgconfig gtk perl python gettext
-    libtool pciutils dbus_glib libcanberra libproxy
-    libsexy libnotify openssl intltool
-    desktop_file_utils hicolor_icon_theme
+  nativeBuildInputs = [
+    pkgconfig libtool intltool
   ];
+
+  buildInputs = [
+    gtk2 lua perl python pciutils dbus_glib libcanberra_gtk2 libproxy
+    libsexy libnotify openssl desktop_file_utils hicolor_icon_theme
+  ];
+
+  enableParallelBuilding = true;
 
  #hexchat and heachat-text loads enchant spell checking library at run time and so it needs to have route to the path
   patchPhase = ''

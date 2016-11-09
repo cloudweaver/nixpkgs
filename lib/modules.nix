@@ -1,4 +1,5 @@
 with import ./lists.nix;
+with import ./strings.nix;
 with import ./trivial.nix;
 with import ./attrsets.nix;
 with import ./options.nix;
@@ -23,6 +24,8 @@ rec {
                   specialArgs ? {}
                 , # This would be remove in the future, Prefer _module.args option instead.
                   args ? {}
+                , # This would be remove in the future, Prefer _module.check option instead.
+                  check ? true
                 }:
     let
       # This internal module declare internal options under the `_module'
@@ -43,21 +46,8 @@ rec {
           _module.check = mkOption {
             type = types.bool;
             internal = true;
-            default = true;
+            default = check;
             description = "Whether to check whether all option definitions have matching declarations.";
-          };
-
-          _module.typeInference = mkOption {
-            type = types.nullOr types.str;
-            internal = true;
-            default = null; # TODO: Move away from 'null' after enough testing.
-            description = ''
-              Mode of type inferencing. Possible values are:
-              null = Disable type inferencing completely. Use 'types.unspecified' for every option without type definition.
-              "silent" = Try to infer type of option without type definition, but do not print anything.
-              "printUnspecified" = Try to infer type of option without type definition and print options for which no full type could be inferred.
-              "printAll" = Try to infer type of option without type definition and print all options without type definition.
-            '';
           };
         };
 
@@ -71,7 +61,7 @@ rec {
       # Note: the list of modules is reversed to maintain backward
       # compatibility with the old module system.  Not sure if this is
       # the most sensible policy.
-      options = mergeModules (config._module) prefix (reverseList closed);
+      options = mergeModules prefix (reverseList closed);
 
       # Traverse options and extract the option values into the final
       # config set.  At the same time, check whether all option
@@ -116,8 +106,12 @@ rec {
   /* Massage a module into canonical form, that is, a set consisting
      of ‘options’, ‘config’ and ‘imports’ attributes. */
   unifyModuleSyntax = file: key: m:
+    let metaSet = if m ? meta 
+      then { meta = m.meta; }
+      else {};
+    in
     if m ? config || m ? options then
-      let badAttrs = removeAttrs m ["imports" "options" "config" "key" "_file"]; in
+      let badAttrs = removeAttrs m ["imports" "options" "config" "key" "_file" "meta"]; in
       if badAttrs != {} then
         throw "Module `${key}' has an unsupported attribute `${head (attrNames badAttrs)}'. This is caused by assignments to the top-level attributes `config' or `options'."
       else
@@ -125,14 +119,14 @@ rec {
           key = toString m.key or key;
           imports = m.imports or [];
           options = m.options or {};
-          config = m.config or {};
+          config = mkMerge [ (m.config or {}) metaSet ];
         }
     else
       { file = m._file or file;
         key = toString m.key or key;
         imports = m.require or [] ++ m.imports or [];
         options = {};
-        config = removeAttrs m ["key" "_file" "require" "imports"];
+        config = mkMerge [ (removeAttrs m ["key" "_file" "require" "imports"]) metaSet ];
       };
 
   applyIfFunction = key: f: args@{ config, options, lib, ... }: if isFunction f then
@@ -181,11 +175,11 @@ rec {
      At the same time, for each option declaration, it will merge the
      corresponding option definitions in all machines, returning them
      in the ‘value’ attribute of each option. */
-  mergeModules = _module: prefix: modules:
-    mergeModules' _module prefix modules
+  mergeModules = prefix: modules:
+    mergeModules' prefix modules
       (concatMap (m: map (config: { inherit (m) file; inherit config; }) (pushDownProperties m.config)) modules);
 
-  mergeModules' = _module: prefix: options: configs:
+  mergeModules' = prefix: options: configs:
     listToAttrs (map (name: {
       # We're descending into attribute ‘name’.
       inherit name;
@@ -211,8 +205,8 @@ rec {
             (filter (m: m.config ? ${name}) configs);
         in
           if nrOptions == length decls then
-            let opt = fixupOptionType _module.typeInference loc (mergeOptionDecls loc decls);
-            in evalOptionValue _module loc opt defns'
+            let opt = fixupOptionType loc (mergeOptionDecls loc decls);
+            in evalOptionValue loc opt defns'
           else if nrOptions != 0 then
             let
               firstOption = findFirst (m: isOption m.options) "" decls;
@@ -220,7 +214,7 @@ rec {
             in
               throw "The option `${showOption loc}' in `${firstOption.file}' is a prefix of options in `${firstNonOption.file}'."
           else
-            mergeModules' _module loc decls defns;
+            mergeModules' loc decls defns;
     }) (concatMap (m: attrNames m.options) options))
     // { _definedNames = map (m: { inherit (m) file; names = attrNames m.config; }) configs; };
 
@@ -237,12 +231,20 @@ rec {
      correspond to the definition of 'loc' in 'opt.file'. */
   mergeOptionDecls = loc: opts:
     foldl' (res: opt:
-      if opt.options ? default && res ? default ||
-         opt.options ? example && res ? example ||
-         opt.options ? description && res ? description ||
-         opt.options ? apply && res ? apply ||
-         # Accept to merge options which have identical types.
-         opt.options ? type && res ? type && opt.options.type.name != res.type.name
+      let t  = res.type;
+          t' = opt.options.type;
+          mergedType = t.typeMerge t'.functor;
+          typesMergeable = mergedType != null;
+          typeSet = if (bothHave "type") && typesMergeable
+                       then { type = mergedType; }
+                       else {};
+          bothHave = k: opt.options ? ${k} && res ? ${k};
+      in
+      if bothHave "default" ||
+         bothHave "example" ||
+         bothHave "description" ||
+         bothHave "apply" ||
+         (bothHave "type" && (! typesMergeable))
       then
         throw "The option `${showOption loc}' in `${opt.file}' is already declared in ${showFiles res.declarations}."
       else
@@ -264,12 +266,12 @@ rec {
         in opt.options // res //
           { declarations = res.declarations ++ [opt.file];
             options = submodules;
-          }
+          } // typeSet
     ) { inherit loc; declarations = []; options = []; } opts;
 
   /* Merge all the definitions of an option to produce the final
      config value. */
-  evalOptionValue = _module: loc: opt: defs:
+  evalOptionValue = loc: opt: defs:
     let
       # Add in the default value for this option, if any.
       defs' =
@@ -281,7 +283,7 @@ rec {
         if opt.readOnly or false && length defs' > 1 then
           throw "The option `${showOption loc}' is read-only, but it's set multiple times."
         else
-          mergeDefinitions _module loc opt.type defs';
+          mergeDefinitions loc opt.type defs';
 
       # Check whether the option is defined, and apply the ‘apply’
       # function to the merged value.  This allows options to yield a
@@ -302,7 +304,7 @@ rec {
       };
 
   # Merge definitions of a value of a given type.
-  mergeDefinitions = _module: loc: type: defs: rec {
+  mergeDefinitions = loc: type: defs: rec {
     defsFinal =
       let
         # Process mkMerge and mkIf properties.
@@ -325,7 +327,7 @@ rec {
     mergedValue = foldl' (res: def:
       if type.check def.value then res
       else throw "The option value `${showOption loc}' in `${def.file}' is not a ${type.name}.")
-      (type.merge _module loc defsFinal) defsFinal;
+      (type.merge loc defsFinal) defsFinal;
 
     isDefined = defsFinal != [];
 
@@ -423,76 +425,24 @@ rec {
   /* Hack for backward compatibility: convert options of type
      optionSet to options of type submodule.  FIXME: remove
      eventually. */
-  fixupOptionType = typeInference: loc: opt:
+  fixupOptionType = loc: opt:
     let
       options = opt.options or
         (throw "Option `${showOption loc'}' has type optionSet but has no option attribute, in ${showFiles opt.declarations}.");
       f = tp:
+        let optionSetIn = type: (tp.name == type) && (tp.functor.wrapped.name == "optionSet");
+        in
         if tp.name == "option set" || tp.name == "submodule" then
           throw "The option ${showOption loc} uses submodules without a wrapping type, in ${showFiles opt.declarations}."
-        else if tp.name == "attribute set of option sets" then types.attrsOf (types.submodule options)
-        else if tp.name == "list or attribute set of option sets" then types.loaOf (types.submodule options)
-        else if tp.name == "list of option sets" then types.listOf (types.submodule options)
-        else if tp.name == "null or option set" then types.nullOr (types.submodule options)
+        else if optionSetIn "attrsOf" then types.attrsOf (types.submodule options)
+        else if optionSetIn "loaOf"   then types.loaOf   (types.submodule options)
+        else if optionSetIn "listOf"  then types.listOf  (types.submodule options)
+        else if optionSetIn "nullOr"  then types.nullOr  (types.submodule options)
         else tp;
-
     in
       if opt.type.getSubModules or null == null
-      then opt // { type = f (opt.type or (inferType typeInference loc opt)); }
+      then opt // { type = f (opt.type or types.unspecified); }
       else opt // { type = opt.type.substSubModules opt.options; options = []; };
-
-
-  /* Function that tries to infer the type of an option from the default value of the option. */
-  inferType = mode: loc: opt:
-    let
-      doc = x: elemAt x 0;
-      type = x: elemAt x 1;
-      containsUnspecified = x: elemAt x 2;
-      inferType' = def:
-        if isDerivation def then [ "package" types.package false ]
-        else if isBool def then [ "bool" types.bool false ]
-        else if builtins.isString def then [ "str" types.str false ]
-        else if isInt def then [ "int" types.int false ]
-        else if isFunction def then [ "functionTo unspecified" (types.functionTo types.unspecified) true ]
-        else if isList def then
-                let nestedType = if (length def > 0) && (all (x: (type (inferType' x)) == (type (inferType' (head def)))) def)
-                                 then inferType' (head def)
-                                 else [ "unspecified" types.unspecified true ];
-                in [ "listOf ${doc nestedType}" (types.listOf (type nestedType)) (containsUnspecified nestedType) ]
-        else if isAttrs def then
-                let list = mapAttrsToList (_: v: v) (removeAttrs def ["_args"]);
-                    nestedType = if (length list > 0) && (all (x: (type (inferType' x)) == (type (inferType' (head list)))) list)
-                                 then inferType' (head list)
-                                 else [ "unspecified" types.unspecified true ];
-                in [ "attrsOf ${doc nestedType}" (types.attrsOf (type nestedType)) (containsUnspecified nestedType) ]
-        else [ "unspecified" types.unspecified true ];
-
-      inferDoc = x: ''
-        Inferring the type of "${showOption loc}" to "${doc x}".
-        Please verify the inferred type and define the type explicitely in ${showFiles opt.declarations}!
-      '';
-
-      inferredType = printMode:
-        let inferred = inferType' opt.default;
-        in if printMode == "silent" then type inferred
-           else if printMode == "printAll" then builtins.trace (inferDoc inferred) (type inferred)
-           else if printMode == "printUnspecified" && (containsUnspecified inferred) then builtins.trace (inferDoc inferred) (type inferred)
-           else type inferred;
-
-      noInferDoc = ''
-        Could not infer a type for "${showOption loc}", using "unspecified" instead.
-        Please define the type explicitely in ${showFiles opt.declarations}!
-      '';
-
-      hasDefault = (opt ? default) && !(opt ? defaultText);
-      isExternalVisible = (opt.visible or true) && !(opt.internal or false);
-    in
-
-    if isNull mode || !isExternalVisible
-    then types.unspecified
-    else if hasDefault
-         then inferredType mode /* Set to 'true' to see every type that is being inferred, not just those types that result in 'unspecified'. */
-         else if mode != "silent" then builtins.trace noInferDoc types.unspecified else types.unspecified;
 
 
   /* Properties. */
@@ -562,25 +512,31 @@ rec {
 
 
   /* Compatibility. */
-  fixMergeModules = modules: args: evalModules { inherit args; modules = (modules ++ [{ _module.check = false; }]); };
+  fixMergeModules = modules: args: evalModules { inherit modules args; check = false; };
 
 
   /* Return a module that causes a warning to be shown if the
      specified option is defined. For example,
 
-       mkRemovedOptionModule [ "boot" "loader" "grub" "bootDevice" ]
+       mkRemovedOptionModule [ "boot" "loader" "grub" "bootDevice" ] "<replacement instructions>"
 
      causes a warning if the user defines boot.loader.grub.bootDevice.
+
+     replacementInstructions is a string that provides instructions on
+     how to achieve the same functionality without the removed option,
+     or alternatively a reasoning why the functionality is not needed.
+     replacementInstructions SHOULD be provided!
   */
-  mkRemovedOptionModule = optionName:
+  mkRemovedOptionModule = optionName: replacementInstructions:
     { options, ... }:
     { options = setAttrByPath optionName (mkOption {
         visible = false;
       });
       config.warnings =
         let opt = getAttrFromPath optionName options; in
-        optional opt.isDefined
-          "The option definition `${showOption optionName}' in ${showFiles opt.files} no longer has any effect; please remove it.";
+        optional opt.isDefined ''
+            The option definition `${showOption optionName}' in ${showFiles opt.files} no longer has any effect; please remove it.
+            ${replacementInstructions}'';
     };
 
   /* Return a module that causes a warning to be shown if the
@@ -599,6 +555,84 @@ rec {
     warn = true;
     use = builtins.trace "Obsolete option `${showOption from}' is used. It was renamed to `${showOption to}'.";
   };
+
+  /* Return a module that causes a warning to be shown if any of the "from"
+     option is defined; the defined values can be used in the "mergeFn" to set
+     the "to" value.
+     This function can be used to merge multiple options into one that has a
+     different type.
+
+     "mergeFn" takes the module "config" as a parameter and must return a value
+     of "to" option type.
+
+       mkMergedOptionModule
+         [ [ "a" "b" "c" ]
+           [ "d" "e" "f" ] ]
+         [ "x" "y" "z" ]
+         (config:
+           let value = p: getAttrFromPath p config;
+           in
+           if      (value [ "a" "b" "c" ]) == true then "foo"
+           else if (value [ "d" "e" "f" ]) == true then "bar"
+           else "baz")
+
+     - options.a.b.c is a removed boolean option
+     - options.d.e.f is a removed boolean option
+     - options.x.y.z is a new str option that combines a.b.c and d.e.f
+       functionality
+
+     This show a warning if any a.b.c or d.e.f is set, and set the value of
+     x.y.z to the result of the merge function 
+  */
+  mkMergedOptionModule = from: to: mergeFn:
+    { config, options, ... }:
+    {
+      options = foldl recursiveUpdate {} (map (path: setAttrByPath path (mkOption {
+        visible = false;
+        # To use the value in mergeFn without triggering errors
+        default = "_mkMergedOptionModule";
+      })) from);
+
+      config = {
+        warnings = filter (x: x != "") (map (f:
+          let val = getAttrFromPath f config;
+              opt = getAttrFromPath f options;
+          in
+          optionalString 
+            (val != "_mkMergedOptionModule")
+            "The option `${showOption f}' defined in ${showFiles opt.files} has been changed to `${showOption to}' that has a different type. Please read `${showOption to}' documentation and update your configuration accordingly."
+        ) from);
+      } // setAttrByPath to (mkMerge
+             (optional 
+               (any (f: (getAttrFromPath f config) != "_mkMergedOptionModule") from)
+               (mergeFn config)));
+    };
+
+  /* Single "from" version of mkMergedOptionModule.
+     Return a module that causes a warning to be shown if the "from" option is
+     defined; the defined value can be used in the "mergeFn" to set the "to"
+     value.
+     This function can be used to change an option into another that has a
+     different type.
+
+     "mergeFn" takes the module "config" as a parameter and must return a value of
+     "to" option type.
+
+       mkChangedOptionModule [ "a" "b" "c" ] [ "x" "y" "z" ]
+         (config:
+           let value = getAttrFromPath [ "a" "b" "c" ] config;
+           in
+           if   value > 100 then "high"
+           else "normal")
+
+     - options.a.b.c is a removed int option
+     - options.x.y.z is a new str option that supersedes a.b.c
+
+     This show a warning if a.b.c is set, and set the value of x.y.z to the
+     result of the change function
+  */
+  mkChangedOptionModule = from: to: changeFn:
+    mkMergedOptionModule [ from ] to changeFn;
 
   /* Like ‘mkRenamedOptionModule’, but doesn't show a warning. */
   mkAliasOptionModule = from: to: doRename {
@@ -619,12 +653,10 @@ rec {
           apply = x: use (toOf config);
         });
         config = {
-        /*
           warnings =
             let opt = getAttrFromPath from options; in
             optional (warn && opt.isDefined)
               "The option `${showOption from}' defined in ${showFiles opt.files} has been renamed to `${showOption to}'.";
-              */
         } // setAttrByPath to (mkAliasDefinitions (getAttrFromPath from options));
       };
 

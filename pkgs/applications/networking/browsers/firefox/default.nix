@@ -1,9 +1,10 @@
-{ lib, stdenv, fetchurl, pkgconfig, gtk, gtk3, pango, perl, python, zip, libIDL
+{ lib, stdenv, fetchurl, pkgconfig, gtk2, gtk3, pango, perl, python, zip, libIDL
 , libjpeg, zlib, dbus, dbus_glib, bzip2, xorg
 , freetype, fontconfig, file, alsaLib, nspr, nss, libnotify
-, yasm, mesa, sqlite, unzip, makeWrapper, pysqlite
+, yasm, mesa, sqlite, unzip, makeWrapper
 , hunspell, libevent, libstartup_notification, libvpx
 , cairo, gstreamer, gst_plugins_base, icu, libpng, jemalloc, libpulseaudio
+, autoconf213, which
 , enableGTK3 ? false
 , debugBuild ? false
 , # If you want the resulting program to call itself "Firefox" instead
@@ -18,32 +19,34 @@ assert stdenv.cc ? libc && stdenv.cc.libc != null;
 
 let
 
-common = { pname, version, sha256 }: stdenv.mkDerivation rec {
+common = { pname, version, sha512 }: stdenv.mkDerivation rec {
   name = "${pname}-unwrapped-${version}";
 
   src = fetchurl {
     url =
       let ext = if lib.versionAtLeast version "41.0" then "xz" else "bz2";
-      in "http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/${version}/source/firefox-${version}.source.tar.${ext}";
-    inherit sha256;
+      in "mirror://mozilla/firefox/releases/${version}/source/firefox-${version}.source.tar.${ext}";
+    inherit sha512;
   };
 
   buildInputs =
-    [ pkgconfig gtk perl zip libIDL libjpeg zlib bzip2
+    [ pkgconfig gtk2 perl zip libIDL libjpeg zlib bzip2
       python dbus dbus_glib pango freetype fontconfig xorg.libXi
       xorg.libX11 xorg.libXrender xorg.libXft xorg.libXt file
       alsaLib nspr nss libnotify xorg.pixman yasm mesa
-      xorg.libXScrnSaver xorg.scrnsaverproto pysqlite
+      xorg.libXScrnSaver xorg.scrnsaverproto
       xorg.libXext xorg.xextproto sqlite unzip makeWrapper
       hunspell libevent libstartup_notification libvpx /* cairo */
-      gstreamer gst_plugins_base icu libpng jemalloc
+      icu libpng jemalloc
       libpulseaudio # only headers are needed
     ]
-    ++ lib.optional enableGTK3 gtk3;
+    ++ lib.optional enableGTK3 gtk3
+    ++ lib.optionals (!passthru.ffmpegSupport) [ gstreamer gst_plugins_base ];
+
+  nativeBuildInputs = [autoconf213 which];
 
   configureFlags =
     [ "--enable-application=browser"
-      "--disable-javaxpcom"
       "--with-system-jpeg"
       "--with-system-zlib"
       "--with-system-bz2"
@@ -58,22 +61,20 @@ common = { pname, version, sha256 }: stdenv.mkDerivation rec {
       "--enable-system-pixman"
       "--enable-system-sqlite"
       #"--enable-system-cairo"
-      "--enable-gstreamer"
       "--enable-startup-notification"
       "--enable-content-sandbox"            # available since 26.0, but not much info available
-      "--disable-content-sandbox-reporter"  # keeping disabled for now
       "--disable-crashreporter"
       "--disable-tests"
       "--disable-necko-wifi" # maybe we want to enable this at some point
-      "--disable-installer"
       "--disable-updater"
       "--enable-jemalloc"
       "--disable-gconf"
+      "--enable-default-toolkit=cairo-gtk2"
     ]
     ++ lib.optional enableGTK3 "--enable-default-toolkit=cairo-gtk3"
     ++ (if debugBuild then [ "--enable-debug" "--enable-profiling" ]
                       else [ "--disable-debug" "--enable-release"
-                             "--enable-optimize${lib.optionalString (stdenv.system == "i686-linux") "=-O1"}"
+                             "--enable-optimize"
                              "--enable-strip" ])
     ++ lib.optional enableOfficialBranding "--enable-official-branding";
 
@@ -81,13 +82,9 @@ common = { pname, version, sha256 }: stdenv.mkDerivation rec {
 
   preConfigure =
     ''
+      configureScript="$(realpath ./configure)"
       mkdir ../objdir
       cd ../objdir
-      if [ -e ../${pname}-${version} ]; then
-        configureScript=../${pname}-${version}/configure
-      else
-        configureScript=../mozilla-*/configure
-      fi
     '';
 
   preInstall =
@@ -99,7 +96,7 @@ common = { pname, version, sha256 }: stdenv.mkDerivation rec {
   postInstall =
     ''
       # For grsecurity kernels
-      paxmark m $out/lib/${pname}-${version}/{firefox,firefox-bin,plugin-container}
+      paxmark m $out/lib/firefox-[0-9]*/{firefox,firefox-bin,plugin-container}
 
       # Remove SDK cruft. FIXME: move to a separate output?
       rm -rf $out/share/idl $out/include $out/lib/firefox-devel-*
@@ -116,6 +113,14 @@ common = { pname, version, sha256 }: stdenv.mkDerivation rec {
       "$out/bin/firefox" --version
     '';
 
+  postFixup =
+    # Fix notifications. LibXUL uses dlopen for this, unfortunately; see #18712.
+    ''
+      patchelf --set-rpath "${lib.getLib libnotify
+        }/lib:$(patchelf --print-rpath "$out"/lib/firefox-*/libxul.so)" \
+          "$out"/lib/firefox-*/libxul.so
+    '';
+
   meta = {
     description = "A web browser" + lib.optionalString (pname == "firefox-esr") " (Extended Support Release)";
     homepage = http://www.mozilla.com/en-US/firefox/;
@@ -124,8 +129,11 @@ common = { pname, version, sha256 }: stdenv.mkDerivation rec {
   };
 
   passthru = {
-    inherit gtk nspr version;
+    inherit nspr version;
+    gtk = gtk2;
     isFirefox3Like = true;
+    browserName = "firefox";
+    ffmpegSupport = lib.versionAtLeast version "46.0";
   };
 };
 
@@ -133,14 +141,14 @@ in {
 
   firefox-unwrapped = common {
     pname = "firefox";
-    version = "44.0.2";
-    sha256 = "17id7ala1slb2mjqkikryqjadcsmdzqmkxrrnb5m1316m50qichb";
+    version = "49.0.2";
+    sha512 = "e9daa62c8e645ec034f1435afb579ddb5c503db313ea0cc3e48b7508f8368028979de07ca1426cc4c0f3ae82756f39dcb3b349712d520b8503a34afbd443fb1e";
   };
 
   firefox-esr-unwrapped = common {
     pname = "firefox-esr";
-    version = "38.6.1esr";
-    sha256 = "1zyhzczhknplxfmk2r7cczavbsml8ckyimibj2sphwdc300ls5wi";
+    version = "45.4.0esr";
+    sha512 = "2955e02f829a10186a8b22320fb97d4b0fc2b45721fcffa6295653fd760d516ae72b5656547685ba1e0699b381e28044996d9ee12a8738842b4e6b8acd296715";
   };
 
 }

@@ -1,16 +1,16 @@
-{ stdenv, fetchurl, pythonPackages }:
+{ stdenv, fetchurl, python2Packages }:
 
-pythonPackages.buildPythonApplication rec {
+python2Packages.buildPythonApplication rec {
   name = "grin-1.2.1";
   namePrefix = "";
 
   src = fetchurl {
-    url = "https://pypi.python.org/packages/source/g/grin/${name}.tar.gz";
+    url = "mirror://pypi/g/grin/${name}.tar.gz";
     sha256 = "1swzwb17wibam8jszdv98h557hlx44pg6psv6rjz7i33qlxk0fdz";
   };
 
-  buildInputs = with pythonPackages; [ nose ];
-  propagatedBuildInputs = with pythonPackages; [ argparse ];
+  buildInputs = with python2Packages; [ nose ];
+  propagatedBuildInputs = with python2Packages; [ argparse ];
 
   meta = {
     homepage = https://pypi.python.org/pypi/grin;

@@ -1,4 +1,4 @@
-{ stdenv, fetchurl, ocaml, findlib, opam }:
+{ stdenv, fetchurl, ocaml, findlib, ocamlbuild, opam }:
 
 let
   inherit (stdenv.lib) getVersion versionAtLeast;
@@ -19,7 +19,7 @@ stdenv.mkDerivation {
     sha256 = "1vm5f2ppdrnk19j0ppjiqz56qf5bzyk26gs0lz071s7iblk459jz";
   };
 
-  buildInputs = [ ocaml findlib opam ];
+  buildInputs = [ ocaml findlib ocamlbuild opam ];
 
   createFindlibDestdir = true;
 
@@ -35,7 +35,7 @@ stdenv.mkDerivation {
   meta = with stdenv.lib; {
     description = "An OCaml library providing efficient access to a selection of character properties of the Unicode character database";
     homepage = "${webpage}";
-    platforms = ocaml.meta.platforms;
+    platforms = ocaml.meta.platforms or [];
     license = licenses.bsd3;
     maintainers = [ maintainers.vbgl ];
   };

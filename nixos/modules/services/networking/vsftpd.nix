@@ -85,6 +85,9 @@ let
         ssl_enable=YES
         rsa_cert_file=${cfg.rsaCertFile}
       ''}
+      ${optionalString (cfg.rsaKeyFile != null) ''
+        rsa_private_key_file=${cfg.rsaKeyFile}
+      ''}
       ${optionalString (cfg.userlistFile != null) ''
         userlist_file=${cfg.userlistFile}
       ''}
@@ -97,6 +100,10 @@ let
         seccomp_sandbox=NO
       ''}
       anon_umask=${cfg.anonymousUmask}
+      ${optionalString cfg.anonymousUser ''
+        anon_root=${cfg.anonymousUserHome}
+      ''}
+      ${cfg.extraConfig}
     '';
 
 in
@@ -147,11 +154,24 @@ in
         description = "RSA certificate file.";
       };
 
+      rsaKeyFile = mkOption {
+        type = types.nullOr types.path;
+        default = null;
+        description = "RSA private key file.";
+      };
+
       anonymousUmask = mkOption {
         type = types.string;
         default = "077";
         example = "002";
         description = "Anonymous write umask.";
+      };
+
+      extraConfig = mkOption {
+        type = types.lines;
+        default = "";
+        example = "ftpd_banner=Hello";
+        description = "Extra configuration to add at the bottom of the generated configuration file.";
       };
 
     } // (listToAttrs (catAttrs "nixosOption" optionDescription));

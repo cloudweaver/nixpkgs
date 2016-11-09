@@ -15,10 +15,10 @@ releaseTools.sourceTarball rec {
   src = nixpkgs;
 
   inherit officialRelease;
-  version = builtins.readFile ../../.version;
+  version = pkgs.lib.fileContents ../../.version;
   versionSuffix = "pre${toString nixpkgs.revCount}.${nixpkgs.shortRev}";
 
-  buildInputs = [ nix jq ];
+  buildInputs = [ nix.out jq ];
 
   configurePhase = ''
     eval "$preConfigure"
@@ -40,7 +40,7 @@ releaseTools.sourceTarball rec {
     echo 'abort "Illegal use of <nixpkgs> in Nixpkgs."' > $TMPDIR/barf.nix
 
     # Make sure that Nixpkgs does not use <nixpkgs>
-    if grep -r '<nixpkgs\/' pkgs; then
+    if (find pkgs -type f -name '*.nix' -print | xargs grep '<nixpkgs\/'); then
         echo "Nixpkgs is not allowed to use <nixpkgs> to refer to itself."
         exit 1
     fi
@@ -48,8 +48,8 @@ releaseTools.sourceTarball rec {
     # Make sure that derivation paths do not depend on the Nixpkgs path.
     mkdir $TMPDIR/foo
     ln -s $(readlink -f .) $TMPDIR/foo/bar
-    p1=$(nix-instantiate pkgs/top-level/all-packages.nix --dry-run -A firefox --show-trace)
-    p2=$(nix-instantiate $TMPDIR/foo/bar/pkgs/top-level/all-packages.nix --dry-run -A firefox)
+    p1=$(nix-instantiate ./. --dry-run -A firefox --show-trace)
+    p2=$(nix-instantiate $TMPDIR/foo/bar --dry-run -A firefox)
     if [ "$p1" != "$p2" ]; then
         echo "Nixpkgs evaluation depends on Nixpkgs path ($p1 vs $p2)!"
         exit 1
@@ -63,12 +63,15 @@ releaseTools.sourceTarball rec {
     fi
 
     # Check that all-packages.nix evaluates on a number of platforms without any warnings.
+    # Filter out MD5 warnings for now
     for platform in i686-linux x86_64-linux x86_64-darwin; do
         header "checking Nixpkgs on $platform"
 
         NIXPKGS_ALLOW_BROKEN=1 nix-env -f . \
             --show-trace --argstr system "$platform" \
-            -qa --drv-path --system-filter \* --system 2>&1 >/dev/null | tee eval-warnings.log
+            -qa --drv-path --system-filter \* --system 2>&1 >/dev/null |
+            (grep -v '^trace: INFO: Deprecated use of MD5 hash in fetch' || true) |
+            tee eval-warnings.log
 
         if [ -s eval-warnings.log ]; then
             echo "Nixpkgs on $platform evaluated with warnings, aborting"

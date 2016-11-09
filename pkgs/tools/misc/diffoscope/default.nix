@@ -6,22 +6,19 @@
 
 pythonPackages.buildPythonApplication rec {
   name = "diffoscope-${version}";
-  version = "49";
+  version = "52";
 
   namePrefix = "";
 
   src = fetchgit {
     url = "git://anonscm.debian.org/reproducible/diffoscope.git";
     rev = "refs/tags/${version}";
-    sha256 = "0kh96h95rp7bk8rgc1z18jwv89dyp1n36bawqyqxhwwklmrgxr66";
+    sha256 = "18nqsd51rc0rldyxnjmzn86154asianhv415llhbxpr1a6zwqis6";
   };
 
   patches =
-    [ # Ignore different link counts and inode change times.
-      (fetchpatch {
-        url = https://github.com/edolstra/diffoscope/commit/367f77bba8df0dbc89e63c9f66f05736adf5ec59.patch;
-        sha256 = "0mnp7icdrjn02dr6f5dwqvvr848jzgkv3cg69a24234y9gxd30ww";
-      })
+    [ # Ignore different link counts.
+      ./ignore_links.patch
     ];
 
   postPatch = ''
@@ -33,9 +30,9 @@ pythonPackages.buildPythonApplication rec {
   # Also these libraries: python3-guestfs
   # FIXME: move xxd into a separate package so we don't have to pull in all of vim.
   propagatedBuildInputs = (with pythonPackages; [ debian libarchive-c python_magic tlsh ]) ++
-    [ acl binutils bzip2 cbfstool cdrkit cpio diffutils e2fsprogs file gettext
+    map lib.getBin ([ acl binutils bzip2 cbfstool cdrkit cpio diffutils e2fsprogs file gettext
       gzip libcaca poppler_utils rpm sng sqlite squashfsTools unzip vim xz
-    ] ++ lib.optionals enableBloat [ colord fpc ghc gnupg1 jdk mono pdftk ];
+    ] ++ lib.optionals enableBloat [ colord fpc ghc gnupg1 jdk mono pdftk ]);
 
   doCheck = false; # Calls 'mknod' in squashfs tests, which needs root
 

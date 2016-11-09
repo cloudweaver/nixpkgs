@@ -1,6 +1,7 @@
 { stdenv, fetchurl, ncurses, openssl, aspell, gnutls
 , zlib, curl , pkgconfig, libgcrypt
-, cmake, makeWrapper, libobjc, libiconv
+, cmake, makeWrapper, libobjc, libresolv, libiconv
+, asciidoctor # manpages
 , guileSupport ? true, guile
 , luaSupport ? true, lua5
 , perlSupport ? true, perl
@@ -20,16 +21,22 @@ let
 in
 
 stdenv.mkDerivation rec {
-  version = "1.4";
+  version = "1.6";
   name = "weechat-${version}";
 
   src = fetchurl {
     url = "http://weechat.org/files/src/weechat-${version}.tar.bz2";
-    sha256 = "1m6xq6izcac5186xvvmm8znfjzrg9hq42p69jabdvv7cri4rjvg0";
+    sha256 = "0d1wcpsxx13clcf1ygcn5hsa1pjkck4xznbjbxphbdxd5whsbv3k";
   };
 
-  cmakeFlags = with stdenv.lib; []
-    ++ optional stdenv.isDarwin "-DICONV_LIBRARY=${libiconv}/lib/libiconv.dylib"
+  outputs = [ "out" "doc" ];
+
+  enableParallelBuilding = true;
+  cmakeFlags = with stdenv.lib; [
+    "-DENABLE_MAN=ON"
+    "-DENABLE_DOC=ON"
+  ]
+    ++ optionals stdenv.isDarwin ["-DICONV_LIBRARY=${libiconv}/lib/libiconv.dylib" "-DCMAKE_FIND_FRAMEWORK=LAST"]
     ++ optional (!guileSupport) "-DENABLE_GUILE=OFF"
     ++ optional (!luaSupport)   "-DENABLE_LUA=OFF"
     ++ optional (!perlSupport)  "-DENABLE_PERL=OFF"
@@ -41,8 +48,9 @@ stdenv.mkDerivation rec {
       ncurses python openssl aspell gnutls zlib curl pkgconfig
       libgcrypt pycrypto makeWrapper
       cmake
-    ]
-    ++ optionals stdenv.isDarwin [ pync libobjc ]
+      asciidoctor
+      ]
+    ++ optionals stdenv.isDarwin [ pync libobjc libresolv ]
     ++ optional  guileSupport    guile
     ++ optional  luaSupport      lua5
     ++ optional  perlSupport     perl
@@ -50,11 +58,15 @@ stdenv.mkDerivation rec {
     ++ optional  tclSupport      tcl
     ++ extraBuildInputs;
 
-  NIX_CFLAGS_COMPILE = "-I${python}/include/${python.libPrefix} -DCA_FILE=/etc/ssl/certs/ca-certificates.crt";
+  NIX_CFLAGS_COMPILE = "-I${python}/include/${python.libPrefix}"
+    # Fix '_res_9_init: undefined symbol' error
+    + (stdenv.lib.optionalString stdenv.isDarwin "-DBIND_8_COMPAT=1 -lresolv");
 
-  postInstall = ''
+  postInstall = with stdenv.lib; ''
     NIX_PYTHONPATH="$out/lib/${python.libPrefix}/site-packages"
     wrapProgram "$out/bin/weechat" \
+      ${optionalString perlSupport "--prefix PATH : ${perl}/bin"} \
+      --prefix PATH : ${pythonPackages.python}/bin \
       --prefix PYTHONPATH : "$PYTHONPATH" \
       --prefix PYTHONPATH : "$NIX_PYTHONPATH"
   '';

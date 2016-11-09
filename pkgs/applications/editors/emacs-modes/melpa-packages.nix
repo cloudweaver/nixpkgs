@@ -4,11 +4,12 @@
 
 To update the list of packages from MELPA,
 
-1. Clone https://github.com/ttuegel/emacs2nix
-2. Clone https://github.com/milkypostman/melpa
-3. Run `./melpa-packages.sh PATH_TO_MELPA_CLONE` from emacs2nix
-4. Copy the new melpa-packages.json file into Nixpkgs
-5. `git commit -m "melpa-packages $(date -Idate)"`
+1. Clone https://github.com/ttuegel/emacs2nix.
+2. Clone https://github.com/milkypostman/melpa.
+3. Run `./melpa-packages.sh --melpa PATH_TO_MELPA_CLONE` from emacs2nix.
+4. Copy the new `melpa-generated.nix` file into Nixpkgs.
+5. Check for evaluation errors: `nix-instantiate ./. -A emacsPackagesNg.melpaPackages`.
+6. `git add pkgs/applications/editors/emacs-modes/melpa-generated.nix && git commit -m "melpa-packages $(date -Idate)"`
 
 */
 
@@ -35,10 +36,6 @@ self:
     });
 
     overrides = {
-      ac-php = super.ac-php.override {
-        inherit (self.melpaPackages) company popup;
-      };
-
       # upstream issue: mismatched filename
       ack-menu = markBroken super.ack-menu;
 
@@ -58,9 +55,6 @@ self:
 
       # upstream issue: missing file header
       connection = markBroken super.connection;
-
-      # upstream issue: missing file header
-      crux = markBroken super.crux;
 
       # upstream issue: missing file header
       dictionary = markBroken super.dictionary;

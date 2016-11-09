@@ -2,7 +2,7 @@
 
 let
 
-  version = "0.0.1.0";
+  version = "0.0.2.1";
 
 in stdenv.mkDerivation rec {
 
@@ -11,7 +11,7 @@ in stdenv.mkDerivation rec {
   src = fetchgit {
     url = "git://git.skarnet.org/s6-rc";
     rev = "refs/tags/v${version}";
-    sha256 = "02ppsda8pg7mph3r7lrh7dhi6ip99bgghsl3lf902cg9i4n50q6q";
+    sha256 = "1gh72q1h1ds53yrzp481nvzaxkhhpm2kv59pfx4x564gxwdvq3a6";
   };
 
   dontDisableStatic = true;
@@ -29,11 +29,13 @@ in stdenv.mkDerivation rec {
     "--with-dynlib=${skalibs}/lib"
     "--with-dynlib=${execline}/lib"
     "--with-dynlib=${s6}/lib"
-  ] ++ [ (if stdenv.isDarwin then "--disable-shared" else "--enable-shared") ];
+  ]
+  ++ (if stdenv.isDarwin then [ "--disable-shared" ] else [ "--enable-shared" ])
+  ++ (stdenv.lib.optional stdenv.isDarwin "--target=${stdenv.system}");
 
   meta = {
     homepage = http://skarnet.org/software/s6-rc/;
-    description = "a service manager for s6-based systems";
+    description = "A service manager for s6-based systems";
     platforms = stdenv.lib.platforms.all;
     license = stdenv.lib.licenses.isc;
     maintainers = with stdenv.lib.maintainers; [ pmahoney ];

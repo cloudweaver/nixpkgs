@@ -24,8 +24,12 @@ stdenv.mkDerivation rec {
     libXrender libcaca cunit
   ];
 
+  hardeningDisable = [ "format" ];
+
+  NIX_CFLAGS_COMPILE = "-Wno-error=deprecated-declarations";
+
   # To avoid problems finding SDL_types.h.
-  configureFlags = [ "CFLAGS=-I${SDL}/include/SDL" ];
+  configureFlags = [ "CFLAGS=-I${SDL.dev}/include/SDL" ];
 
   meta = with stdenv.lib; {
     description = "Quick tactics game";

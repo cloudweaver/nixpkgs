@@ -5,15 +5,17 @@
 }:
 
 stdenv.mkDerivation rec {
-  name = "notmuch-0.21";
+  version = "0.22";
+  name = "notmuch-${version}";
 
   passthru = {
     pythonSourceRoot = "${name}/bindings/python";
+    inherit version;
   };
 
   src = fetchurl {
     url = "http://notmuchmail.org/releases/${name}.tar.gz";
-    sha256 = "1cr53rbpkcy3pvrmhbg2gq7sjpwb0c8xd7a4zhzxbiv8s7z8yvyh";
+    sha256 = "16mrrw6xpsgip4dy8rfx0zncij5h41fsg2aah6x6z83bjbpihhfn";
   };
 
   buildInputs = [ bash emacs glib gmime gnupg pkgconfig talloc xapian sphinx python ]

@@ -56,7 +56,6 @@ in
 
       setXAuthLocation = mkOption {
         type = types.bool;
-        default = config.services.xserver.enable;
         description = ''
           Whether to set the path to <command>xauth</command> for X11-forwarded connections.
           This causes a dependency on X11 packages.
@@ -165,6 +164,9 @@ in
 
   config = {
 
+    programs.ssh.setXAuthLocation =
+      mkDefault (config.services.xserver.enable || config.programs.ssh.forwardX11);
+
     assertions =
       [ { assertion = cfg.forwardX11 -> cfg.setXAuthLocation;
           message = "cannot enable X11 forwarding without setting XAuth location";
@@ -189,6 +191,7 @@ in
 
         # Allow DSA keys for now. (These were deprecated in OpenSSH 7.0.)
         PubkeyAcceptedKeyTypes +ssh-dss
+        HostKeyAlgorithms +ssh-dss
 
         ${cfg.extraConfig}
       '';

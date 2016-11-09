@@ -1,8 +1,9 @@
-{ lib, stdenv, fetchurl, perl, gmp ? null
+{ lib, stdenv, fetchurl, perl, xz, gmp ? null
 , aclSupport ? false, acl ? null
 , selinuxSupport? false, libselinux ? null, libsepol ? null
 , autoconf, automake114x, texinfo
 , withPrefix ? false
+, singleBinary ? "symlinks" # you can also pass "shebangs" or false
 }:
 
 assert aclSupport -> acl != null;
@@ -19,17 +20,27 @@ let
       sha256 = "11yfrnb94xzmvi4lhclkcmkqsbhww64wf234ya1aacjvg82prrii";
     };
 
+    # FIXME needs gcc 4.9 in bootstrap tools
+    hardeningDisable = [ "stackprotector" ];
+
     patches = optional stdenv.isCygwin ./coreutils-8.23-4.cygwin.patch;
 
     # The test tends to fail on btrfs and maybe other unusual filesystems.
     postPatch = optionalString (!stdenv.isDarwin) ''
       sed '2i echo Skipping dd sparse test && exit 0' -i ./tests/dd/sparse.sh
       sed '2i echo Skipping cp sparse test && exit 0' -i ./tests/cp/sparse.sh
+      sed '2i echo Skipping rm deep-2 test && exit 0' -i ./tests/rm/deep-2.sh
+      sed '2i echo Skipping du long-from-unreadable test && exit 0' -i ./tests/du/long-from-unreadable.sh
     '';
 
-    configureFlags = optionalString stdenv.isSunOS "ac_cv_func_inotify_init=no";
+    outputs = [ "out" "info" ];
 
-    nativeBuildInputs = [ perl ];
+    nativeBuildInputs = [ perl xz.bin ];
+    configureFlags =
+      optional (singleBinary != false)
+        ("--enable-single-binary" + optionalString (isString singleBinary) "=${singleBinary}")
+      ++ optional stdenv.isSunOS "ac_cv_func_inotify_init=no";
+
     buildInputs = [ gmp ]
       ++ optional aclSupport acl
       ++ optionals stdenv.isCygwin [ autoconf automake114x texinfo ]   # due to patch
@@ -66,7 +77,8 @@ let
     # (http://thread.gmane.org/gmane.comp.gnu.core-utils.bugs/19025),
     # Darwin (http://thread.gmane.org/gmane.comp.gnu.core-utils.bugs/19351),
     # and {Open,Free}BSD.
-    doCheck = stdenv ? glibc;
+    # With non-standard storeDir: https://github.com/NixOS/nix/issues/512
+    doCheck = stdenv ? glibc && builtins.storeDir == "/nix/store";
 
     # Saw random failures like ‘help2man: can't get '--help' info from
     # man/sha512sum.td/sha512sum’.

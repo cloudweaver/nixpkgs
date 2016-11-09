@@ -21,19 +21,26 @@ let
     name = "nixos-install";
     src = ./nixos-install.sh;
 
-    inherit (pkgs) perl pathsFromGraph;
-    nix = config.nix.package;
+    inherit (pkgs) perl pathsFromGraph rsync;
+    nix = config.nix.package.out;
+    cacert = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+    root_uid = config.ids.uids.root;
+    nixbld_gid = config.ids.gids.nixbld;
 
     nixClosure = pkgs.runCommand "closure"
-      { exportReferencesGraph = ["refs" config.nix.package]; }
+      { exportReferencesGraph = ["refs" config.nix.package.out]; }
       "cp refs $out";
   };
 
-  nixos-rebuild = makeProg {
-    name = "nixos-rebuild";
-    src = ./nixos-rebuild.sh;
-    nix = config.nix.package;
-  };
+  nixos-rebuild =
+    let fallback = import ./nix-fallback-paths.nix; in
+    makeProg {
+      name = "nixos-rebuild";
+      src = ./nixos-rebuild.sh;
+      nix = config.nix.package.out;
+      nix_x86_64_linux = fallback.x86_64-linux;
+      nix_i686_linux = fallback.i686-linux;
+    };
 
   nixos-generate-config = makeProg {
     name = "nixos-generate-config";
@@ -54,11 +61,6 @@ let
     inherit (config.system) nixosVersion nixosCodeName nixosRevision;
   };
 
-  nixos-typecheck = makeProg {
-    name = "nixos-typecheck";
-    src = ./nixos-typecheck.sh;
-  };
-
 in
 
 {
@@ -72,11 +74,10 @@ in
         nixos-generate-config
         nixos-option
         nixos-version
-        nixos-typecheck
       ];
 
     system.build = {
-      inherit nixos-install nixos-generate-config nixos-option nixos-rebuild nixos-typecheck;
+      inherit nixos-install nixos-generate-config nixos-option nixos-rebuild;
     };
 
   };

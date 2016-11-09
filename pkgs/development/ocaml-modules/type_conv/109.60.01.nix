@@ -1,10 +1,6 @@
 {stdenv, fetchurl, ocaml, findlib, camlp4}:
 
-let
-  ocaml_version = (builtins.parseDrvName ocaml.name).version;
-in
-
-assert stdenv.lib.versionOlder "4.00" ocaml_version;
+assert stdenv.lib.versionOlder "4.00" ocaml.version;
 
 stdenv.mkDerivation {
   name = "ocaml-type_conv-109.60.01";
@@ -22,7 +18,7 @@ stdenv.mkDerivation {
     homepage = "http://forge.ocamlcore.org/projects/type-conv/";
     description = "Support library for OCaml preprocessor type conversions";
     license = stdenv.lib.licenses.lgpl21;
-    platforms = ocaml.meta.platforms;
+    platforms = ocaml.meta.platforms or [];
     maintainers = with stdenv.lib.maintainers; [ z77z ];
   };
 }

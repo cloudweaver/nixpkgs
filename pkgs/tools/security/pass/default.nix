@@ -1,5 +1,5 @@
 { stdenv, fetchurl
-, coreutils, gnused, getopt, pwgen, git, tree, gnupg, which
+, coreutils, gnused, getopt, pwgen, git, tree, gnupg, which, procps
 , makeWrapper
 
 , xclip ? null, xdotool ? null, dmenu ? null
@@ -20,8 +20,9 @@ stdenv.mkDerivation rec {
   };
 
   patches =
-    [ ./program-name.patch ] ++
-    stdenv.lib.optional stdenv.isDarwin ./no-darwin-getopt.patch;
+    [ ./program-name.patch
+      ./set-correct-program-name-for-sleep.patch
+    ] ++ stdenv.lib.optional stdenv.isDarwin ./no-darwin-getopt.patch;
 
   buildInputs = [ makeWrapper ];
 
@@ -44,7 +45,7 @@ stdenv.mkDerivation rec {
   preInstall = ''
     mkdir -p "$out/share/bash-completion/completions"
     mkdir -p "$out/share/zsh/site-functions"
-    mkdir -p "$out/share/fish/completions"
+    mkdir -p "$out/share/fish/vendor_completions.d"
   '';
 
   installFlags = [ "PREFIX=$(out)" ];
@@ -61,16 +62,17 @@ stdenv.mkDerivation rec {
     '' else ""}
   '';
 
-  wrapperPath = with stdenv.lib; makeSearchPath "bin/" ([
+  wrapperPath = with stdenv.lib; makeBinPath ([
     coreutils
-    gnused
     getopt
     git
     gnupg
+    gnused
     pwgen
     tree
     which
-  ] ++ ifEnable x11Support [ dmenu xclip xdotool ]);
+  ] ++ stdenv.lib.optional stdenv.isLinux procps
+    ++ ifEnable x11Support [ dmenu xclip xdotool ]);
 
   postFixup = ''
     # Fix program name in --help

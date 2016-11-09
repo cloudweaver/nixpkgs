@@ -2,16 +2,19 @@
 
 let
   pname = "icu4c";
-  version = "56.1";
+  version = "57.1";
 in
-stdenv.mkDerivation {
+stdenv.mkDerivation ({
   name = pname + "-" + version;
 
   src = fetchurl {
     url = "http://download.icu-project.org/files/${pname}/${version}/${pname}-"
       + (stdenv.lib.replaceChars ["."] ["_"] version) + "-src.tgz";
-    sha256 = "05j86714qaj0lvhvyr2s1xncw6sk0h2dcghb3iiwykbkbh8fjr1s";
+    sha256 = "10cmkqigxh9f73y7q3p991q6j8pph0mrydgj11w1x6wlcp5ng37z";
   };
+
+  outputs = [ "out" "dev" ];
+  outputBin = "dev";
 
   makeFlags = stdenv.lib.optionalString stdenv.isDarwin
     "CXXFLAGS=-headerpad_max_install_names";
@@ -37,6 +40,8 @@ stdenv.mkDerivation {
     sed -i 's/INSTALL_CMD=.*install/INSTALL_CMD=install/' $out/lib/icu/${version}/pkgdata.inc
   '';
 
+  postFixup = ''moveToOutput lib/icu "$dev" '';
+
   enableParallelBuilding = true;
 
   meta = with stdenv.lib; {
@@ -45,4 +50,6 @@ stdenv.mkDerivation {
     maintainers = with maintainers; [ raskin urkud ];
     platforms = platforms.all;
   };
-}
+} // (if stdenv.isArm then {
+  patches = [ ./0001-Disable-LDFLAGSICUDT-for-Linux.patch ];
+} else {}))

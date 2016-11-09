@@ -1,12 +1,10 @@
 { stdenv
 , fetchurl
-, buildPythonApplication
-, pyqt4
 , pythonPackages
 }:
 let
   version = "2.3.2";
-in buildPythonApplication rec {
+in pythonPackages.buildPythonApplication rec {
   name = "mnemosyne-${version}";
   src = fetchurl {
     url    = "http://sourceforge.net/projects/mnemosyne-proj/files/mnemosyne/${name}/Mnemosyne-${version}.tar.gz";
@@ -16,7 +14,6 @@ in buildPythonApplication rec {
     pyqt4
     matplotlib
     cherrypy
-    sqlite3
     webob
   ];
   preConfigure = ''

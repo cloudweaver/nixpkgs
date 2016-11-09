@@ -1,15 +1,20 @@
-# Maintainer's Notes:
-#
-# Minor updates:
-#  1. Edit ./fetchsrcs.sh to point to the updated URL.
-#  2. Run ./fetchsrcs.sh.
-#  3. Build and enjoy.
-#
-# Major updates:
-#  We prefer not to immediately overwrite older versions with major updates, so
-#  make a copy of this directory first. After copying, be sure to delete ./tmp
-#  if it exists. Then follow the minor update instructions. Be sure to check if
-#  any new components have been added and package them as necessary.
+/*
+
+# Minor Updates
+
+1. Edit ./fetchsrcs.sh to point to the updated URL.
+2. Run ./fetchsrcs.sh.
+3. Build and enjoy.
+
+# Major Updates
+
+1. Make a copy of this directory. (We like to keep the old version around
+   for a short time after major updates.)
+2. Delete the tmp/ subdirectory of the copy.
+3. Follow the minor update instructions above.
+4. Package any new Qt modules, if necessary.
+
+*/
 
 { pkgs
 
@@ -37,21 +42,18 @@ let
       inherit src;
 
       propagatedBuildInputs = args.qtInputs ++ (args.propagatedBuildInputs or []);
+      nativeBuildInputs = (args.nativeBuildInputs or []) ++ [ self.qmakeHook ];
 
       NIX_QT_SUBMODULE = args.NIX_QT_SUBMODULE or true;
-      dontAddPrefix = args.dontAddPrefix or true;
-      dontFixLibtool = args.dontFixLibtool or true;
-      configureScript = args.configureScript or "qmake";
+
+      outputs = args.outputs or [ "out" "dev" ];
+      setOutputFlags = args.setOutputFlags or false;
+
+      setupHook = ./setup-hook.sh;
 
       enableParallelBuilding = args.enableParallelBuilding or true;
 
-      meta = {
-        homepage = http://qt-project.org;
-        description = "A cross-platform application framework for C++";
-        license = with licenses; [ fdl13 gpl2 lgpl21 lgpl3 ];
-        maintainers = with maintainers; [ bbenoist qknight ttuegel ];
-        platforms = platforms.linux;
-      } // (args.meta or {});
+      meta = self.qtbase.meta // (args.meta or {});
     });
 
   addPackages = self: with self;
@@ -61,9 +63,10 @@ let
 
       qtbase = callPackage ./qtbase {
         mesa = pkgs.mesa_noglu;
+        harfbuzz = pkgs.harfbuzz-icu;
         cups = if stdenv.isLinux then pkgs.cups else null;
         # GNOME dependencies are not used unless gtkStyle == true
-        inherit (pkgs.gnome) libgnomeui GConf gnome_vfs;
+        inherit (pkgs.gnome2) libgnomeui GConf gnome_vfs;
         bison = pkgs.bison2; # error: too few arguments to function 'int yylex(...
         inherit developerBuild decryptSslTraffic;
       };
@@ -89,7 +92,7 @@ let
       qtsensors = callPackage ./qtsensors.nix {};
       qtserialport = callPackage ./qtserialport {};
       qtsvg = callPackage ./qtsvg.nix {};
-      qttools = callPackage ./qttools.nix {};
+      qttools = callPackage ./qttools {};
       qttranslations = callPackage ./qttranslations.nix {};
       /* qtwayland = not packaged */
       /* qtwebchannel = not packaged */
@@ -110,7 +113,10 @@ let
       ];
 
       makeQtWrapper = makeSetupHook { deps = [ makeWrapper ]; } ./make-qt-wrapper.sh;
+      qmakeHook = makeSetupHook { substitutions = { qt_dev = qtbase.dev; lndir = pkgs.xorg.lndir; }; } ./qmake-hook.sh;
 
     };
 
-in makeScope pkgs.newScope addPackages
+   self = makeScope pkgs.newScope addPackages;
+
+in self

@@ -5,7 +5,8 @@
 
 let
   ghc = ghcWithPackages (pkgs: with pkgs; [
-          network vector utf8-string bytestring-show random hslogger dataenc SHA entropy zlib_0_5_4_2
+          network vector utf8-string bytestring-show random hslogger
+          dataenc SHA entropy zlib_0_5_4_2
         ]);
 in
 stdenv.mkDerivation rec {
@@ -21,21 +22,25 @@ stdenv.mkDerivation rec {
     qt4 ghc ffmpeg freeglut makeWrapper physfs
   ];
 
+  postPatch = ''
+    substituteInPlace gameServer/CMakeLists.txt --replace mask evaluate
+  '';
+
   preBuild = ''
     export NIX_LDFLAGS="$NIX_LDFLAGS -rpath ${SDL_image}/lib
                                      -rpath ${SDL_mixer}/lib
                                      -rpath ${SDL_net}/lib
                                      -rpath ${SDL_ttf}/lib
-                                     -rpath ${SDL}/lib
-                                     -rpath ${libpng}/lib
+                                     -rpath ${SDL.out}/lib
+                                     -rpath ${libpng.out}/lib
                                      -rpath ${lua5_1}/lib
                                      -rpath ${mesa}/lib
-                                     -rpath ${zlib}/lib
+                                     -rpath ${zlib.out}/lib
                                      "
   '';
 
   postInstall = ''
-    wrapProgram $out/bin/hwengine --prefix LD_LIBRARY_PATH : $LD_LIBRARY_PATH:${mesa}/lib/:${freeglut}/lib:${physfs}/lib
+    wrapProgram $out/bin/hwengine --prefix LD_LIBRARY_PATH : $LD_LIBRARY_PATH:${stdenv.lib.makeLibraryPath [ mesa freeglut physfs ]}
   '';
 
   meta = with stdenv.lib; {
@@ -65,7 +70,7 @@ stdenv.mkDerivation rec {
        contact with explosions, to zero (the damage dealt to the attacked
        hedgehog or hedgehogs after a player's or CPU turn is shown only when
        all movement on the battlefield has ceased).'';
-    maintainers = with maintainers; [ kragniz ];
+    maintainers = with maintainers; [ kragniz fpletz ];
     platforms = ghc.meta.platforms;
   };
 }

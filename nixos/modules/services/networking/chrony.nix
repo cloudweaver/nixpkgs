@@ -51,6 +51,7 @@ in
       };
 
       extraConfig = mkOption {
+        type = types.lines;
         default = "";
         description = ''
           Extra configuration directives that should be added to
@@ -64,7 +65,7 @@ in
 
   ###### implementation
 
-  config = mkIf config.services.chrony.enable {
+  config = mkIf cfg.enable {
 
     # Make chronyc available in the system path
     environment.systemPackages = [ pkgs.chrony ];
@@ -101,12 +102,14 @@ in
         home = stateDir;
       };
 
-    systemd.services.ntpd.enable = false;
+    systemd.services.ntpd.enable = mkForce false;
 
     systemd.services.chronyd =
       { description = "chrony NTP daemon";
 
         wantedBy = [ "multi-user.target" ];
+        wants = [ "time-sync.target" ];
+        before = [ "time-sync.target" ];
         after = [ "network.target" ];
         conflicts = [ "ntpd.service" "systemd-timesyncd.service" ];
 

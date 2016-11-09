@@ -45,7 +45,7 @@ stdenv.mkDerivation rec {
       ln -s $path/lib/*.so* $out/lib/
     done
 
-    ln -s ${stdenv.cc.cc}/lib/libstdc++.so.6 $out/lib/
+    ln -s ${stdenv.cc.cc.lib}/lib/libstdc++.so.6 $out/lib/
 
     mkdir $out/bin
     ln -s $out/renoise $out/bin/renoise
@@ -54,7 +54,7 @@ stdenv.mkDerivation rec {
   '';
 
   meta = {
-    description = "modern tracker-based DAW";
+    description = "Modern tracker-based DAW";
     homepage = http://www.renoise.com/;
     license = stdenv.lib.licenses.unfree;
   };

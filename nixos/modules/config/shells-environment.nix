@@ -1,7 +1,7 @@
 # This module defines a global environment configuration and
 # a common configuration for all shells.
 
-{ config, lib, pkgs, ... }:
+{ config, lib, utils, pkgs, ... }:
 
 with lib;
 
@@ -41,7 +41,7 @@ in
         strings.  The latter is concatenated, interspersed with colon
         characters.
       '';
-      type = types.attrsOf (types.loeOf types.str);
+      type = with types; attrsOf (either str (listOf str));
       apply = mapAttrs (n: v: if isList v then concatStringsSep ":" v else v);
     };
 
@@ -135,13 +135,13 @@ in
 
     environment.shells = mkOption {
       default = [];
-      example = [ "/run/current-system/sw/bin/zsh" ];
+      example = literalExample "[ pkgs.bashInteractive pkgs.zsh ]";
       description = ''
         A list of permissible login shells for user accounts.
         No need to mention <literal>/bin/sh</literal>
         here, it is placed into this list implicitly.
       '';
-      type = types.listOf types.path;
+      type = types.listOf (types.either types.shellPackage types.path);
     };
 
   };
@@ -158,7 +158,7 @@ in
 
     environment.etc."shells".text =
       ''
-        ${concatStringsSep "\n" cfg.shells}
+        ${concatStringsSep "\n" (map utils.toShellPath cfg.shells)}
         /bin/sh
       '';
 

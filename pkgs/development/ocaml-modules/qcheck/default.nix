@@ -1,4 +1,4 @@
-{ stdenv, fetchzip, ocaml, findlib, oasis, ounit }:
+{ stdenv, fetchzip, ocaml, findlib, ocamlbuild, oasis, ounit }:
 
 assert stdenv.lib.versionAtLeast (stdenv.lib.getVersion ocaml) "4";
 
@@ -10,7 +10,7 @@ stdenv.mkDerivation {
     sha256 = "0j2jdrfz8rrslgjihnfgg8yy12860z2vvf7hqzjbmfmf03hz4pgv";
   };
 
-  buildInputs = [ ocaml findlib oasis ounit ];
+  buildInputs = [ ocaml findlib ocamlbuild oasis ounit ];
 
   configureFlags = "--enable-tests --enable-ounit";
 
@@ -24,6 +24,6 @@ stdenv.mkDerivation {
     homepage = https://github.com/c-cube/qcheck/;
     license = stdenv.lib.licenses.bsd2;
     maintainers = with stdenv.lib.maintainers; [ vbgl ];
-    platforms = ocaml.meta.platforms;
+    platforms = ocaml.meta.platforms or [];
   };
 }

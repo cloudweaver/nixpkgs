@@ -1,16 +1,20 @@
-{ stdenv, fetchurl, pkgs, pythonPackages }:
+{ stdenv, fetchurl, glibcLocales, python3Packages }:
 
-pythonPackages.buildPythonApplication rec {
-  version = "0.8.1";
+python3Packages.buildPythonApplication rec {
+  version = "0.11.1";
   name = "khard-${version}";
   namePrefix = "";
 
   src = fetchurl {
     url = "https://github.com/scheibler/khard/archive/v${version}.tar.gz";
-    sha256 = "13axfrs96isirx0c483545xdmjwwfq1k7yy92xpk7l184v71rgi1";
+    sha256 = "0055xx9icmsr6l7v0iqrndmygygdpdv10550w6pyrb96svzhry27";
   };
 
-  propagatedBuildInputs = with pythonPackages; [
+  # setup.py reads the UTF-8 encoded readme.
+  LC_ALL = "en_US.UTF-8";
+  buildInputs = [ glibcLocales ];
+
+  propagatedBuildInputs = with python3Packages; [
     atomicwrites
     configobj
     vobject
@@ -18,9 +22,8 @@ pythonPackages.buildPythonApplication rec {
     pyyaml
   ];
 
-  buildInputs = with pythonPackages; [
-    pkgs.vdirsyncer
-  ];
+  # Fails; but there are no tests anyway.
+  doCheck = false;
 
   meta = {
     homepage = https://github.com/scheibler/khard;

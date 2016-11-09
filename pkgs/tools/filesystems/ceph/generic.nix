@@ -1,5 +1,6 @@
-{ stdenv, autoconf, automake, makeWrapper, pkgconfig, libtool, which, git
-, boost, python, pythonPackages, libxml2, zlib
+{ stdenv, ensureNewerSourcesHook, autoconf, automake, makeWrapper, pkgconfig
+, libtool, which, git
+, boost, python2Packages, libxml2, zlib
 
 # Optional Dependencies
 , snappy ? null, leveldb ? null, yasm ? null, fcgi ? null, expat ? null
@@ -29,6 +30,7 @@ assert cryptopp != null || (nss != null && nspr != null);
 with stdenv;
 with stdenv.lib;
 let
+  inherit (python2Packages) python;
   mkFlag = trueStr: falseStr: cond: name: val:
     if cond == null then null else
       "--${if cond != false then trueStr else falseStr}${name}"
@@ -98,8 +100,7 @@ let
   };
 
   wrapArgs = "--set PYTHONPATH \"$(toPythonPath $lib)\""
-    + " --prefix PYTHONPATH : \"$(toPythonPath ${python.modules.readline})\""
-    + " --prefix PYTHONPATH : \"$(toPythonPath ${pythonPackages.flask})\""
+    + " --prefix PYTHONPATH : \"$(toPythonPath ${python2Packages.flask})\""
     + " --set PATH \"$out/bin\"";
 in
 stdenv.mkDerivation {
@@ -111,25 +112,28 @@ stdenv.mkDerivation {
     ./0001-Makefile-env-Don-t-force-sbin.patch
   ];
 
-  nativeBuildInputs = [ autoconf automake makeWrapper pkgconfig libtool which git ]
+  nativeBuildInputs = [
+    autoconf automake makeWrapper pkgconfig libtool which git
+    (ensureNewerSourcesHook { year = "1980"; })
+  ]
     ++ optionals (versionAtLeast version "9.0.2") [
-      pythonPackages.setuptools pythonPackages.argparse
+      python2Packages.setuptools python2Packages.argparse
     ];
   buildInputs = buildInputs ++ cryptoLibsMap.${cryptoStr} ++ [
-    boost python libxml2 optYasm optLibatomic_ops optLibs3 malloc pythonPackages.flask zlib
-  ] ++ optional (versionAtLeast version "9.0.0") [
-    pythonPackages.sphinx # Used for docs
-  ] ++ optional stdenv.isLinux [
+    boost python libxml2 optYasm optLibatomic_ops optLibs3 malloc python2Packages.flask zlib
+  ] ++ optionals (versionAtLeast version "9.0.0") [
+    python2Packages.sphinx # Used for docs
+  ] ++ optionals stdenv.isLinux [
     linuxHeaders libuuid udev keyutils optLibaio optLibxfs optZfs
-  ] ++ optional hasServer [
+  ] ++ optionals hasServer [
     optSnappy optLeveldb
-  ] ++ optional hasRadosgw [
+  ] ++ optionals hasRadosgw [
     optFcgi optExpat optCurl optFuse optLibedit
-  ] ++ optional hasXio [
+  ] ++ optionals hasXio [
     optAccelio optLibibverbs optLibrdmacm
-  ] ++ optional hasRocksdb [
+  ] ++ optionals hasRocksdb [
     optRocksdb
-  ] ++ optional hasKinetic [
+  ] ++ optionals hasKinetic [
     optKinetic-cpp-client
   ];
 
@@ -263,7 +267,7 @@ stdenv.mkDerivation {
 
     # Fix .la file link dependencies
     find "$lib/lib" -name \*.la | xargs sed -i \
-      -e 's,-lboost_[a-z]*,-L${boost.lib}/lib \0,g' \
+      -e 's,-lboost_[a-z]*,-L${boost.out}/lib \0,g' \
   '' + optionalString (cryptoStr == "cryptopp") ''
       -e 's,-lcryptopp,-L${optCryptopp}/lib \0,g' \
   '' + optionalString (cryptoStr == "nss") ''

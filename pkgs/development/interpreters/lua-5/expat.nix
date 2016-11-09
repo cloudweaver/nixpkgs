@@ -15,12 +15,12 @@ stdenv.mkDerivation rec {
     makeFlagsArray=(
       LUA_LDIR="$out/share/lua/${lua5.luaversion}"
       LUA_INC="-I${lua5}/include" LUA_CDIR="$out/lib/lua/${lua5.luaversion}"
-      EXPAT_INC="-I${expat}/include");
+      EXPAT_INC="-I${expat.dev}/include");
   '';
 
   meta = {
     homepage = "http://matthewwild.co.uk/projects/luaexpat";
-    hydraPlatforms = stdenv.lib.platforms.linux;
+    platforms = stdenv.lib.platforms.linux;
     maintainers = [ stdenv.lib.maintainers.flosse ];
   };
 }

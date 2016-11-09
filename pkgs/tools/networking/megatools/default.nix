@@ -3,11 +3,11 @@
 
 stdenv.mkDerivation rec {
   name = "megatools-${version}";
-  version = "1.9.94";
+  version = "1.9.97";
 
   src = fetchurl {
     url = "http://megatools.megous.com/builds/${name}.tar.gz";
-    sha256 = "1kms0k652sszcbzmx5nmz07gc8zbqqiskh8hvmvf6xaga7y3lgrx";
+    sha256 = "1wssf8f2ndh43sdzcfc644azqa7bjppl3b9s26mz1pjswmpca5ik";
   };
 
   buildInputs = [ pkgconfig glib fuse curl makeWrapper
@@ -16,7 +16,7 @@ stdenv.mkDerivation rec {
   postInstall = ''
     for i in $(find $out/bin/ -type f); do
       wrapProgram "$i" \
-            --prefix GIO_EXTRA_MODULES : "${glib_networking}/lib/gio/modules" \
+            --prefix GIO_EXTRA_MODULES : "${glib_networking.out}/lib/gio/modules" \
             --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH"
     done
   '';

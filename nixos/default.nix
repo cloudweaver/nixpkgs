@@ -34,12 +34,10 @@ in
 
   system = eval.config.system.build.toplevel;
 
-  typechecker = eval.config.system.build.typechecker;
-
   vm = vmConfig.system.build.vm;
 
   vmWithBootLoader = vmWithBootLoaderConfig.system.build.vm;
 
   # The following are used by nixos-rebuild.
-  nixFallback = pkgs.nixUnstable;
+  nixFallback = pkgs.nixUnstable.out;
 }

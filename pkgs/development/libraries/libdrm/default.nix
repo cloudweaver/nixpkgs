@@ -1,16 +1,19 @@
 { stdenv, fetchurl, pkgconfig, libpthreadstubs, libpciaccess, udev, valgrind }:
 
 stdenv.mkDerivation rec {
-  name = "libdrm-2.4.66";
+  name = "libdrm-2.4.71";
 
   src = fetchurl {
     url = "http://dri.freedesktop.org/libdrm/${name}.tar.bz2";
-    sha256 = "79cb8e988749794edfb2d777b298d5292eff353bbbb71ed813589e61d2bc2d76";
+    sha256 = "c66287ddeee5f46ea8f8880b94b80acb3bbc33ba6321d17767eef145046df9b8";
   };
 
+  outputs = [ "out" "dev" ];
+
   nativeBuildInputs = [ pkgconfig ];
-  buildInputs = [ libpthreadstubs libpciaccess ]
-    ++ stdenv.lib.optional stdenv.isLinux udev;
+  buildInputs = [ libpthreadstubs libpciaccess ];
+    # libdrm as of 2.4.70 does not actually do anything with udev.
+    #++ stdenv.lib.optional stdenv.isLinux udev;
 
   patches = stdenv.lib.optional stdenv.isDarwin ./libdrm-apple.patch;
 

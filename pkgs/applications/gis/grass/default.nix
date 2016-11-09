@@ -11,8 +11,8 @@ stdenv.mkDerivation {
   };
 
   buildInputs = [ flex bison zlib proj gdal libtiff libpng fftw sqlite pkgconfig cairo
-  readline ffmpeg makeWrapper wxGTK30 netcdf geos postgresql mysql.lib blas ]
-    ++ (with pythonPackages; [ python dateutil wxPython30 numpy sqlite3 ]);
+  readline ffmpeg makeWrapper wxGTK30 netcdf geos postgresql mysql.client blas ]
+    ++ (with pythonPackages; [ python dateutil wxPython30 numpy ]);
 
   configureFlags = [
     "--with-proj-share=${proj}/share/proj"
@@ -21,8 +21,9 @@ stdenv.mkDerivation {
     "--with-wxwidgets"
     "--with-netcdf"
     "--with-geos"
-    "--with-postgres"
-    "--with-mysql" "--with-mysql-includes=${mysql.lib}/include/mysql"
+    "--with-postgres" "--with-postgres-libs=${postgresql.lib}/lib/"
+    # it complains about missing libmysqld but doesn't really seem to need it
+    "--with-mysql" "--with-mysql-includes=${stdenv.lib.getDev mysql.client}/include/mysql"
     "--with-blas"
   ];
 

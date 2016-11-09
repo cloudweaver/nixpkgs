@@ -1,25 +1,28 @@
 { stdenv, fetchurl, pkgconfig, zlib, libjpeg, libpng, libtiff, pam
-, dbus, acl, gmp, darwin
+, dbus, systemd, acl, gmp, darwin
 , libusb ? null, gnutls ? null, avahi ? null, libpaper ? null
 }:
 
 ### IMPORTANT: before updating cups, make sure the nixos/tests/printing.nix test
 ### works at least for your platform.
-let version = "2.1.3"; in
 
 with stdenv.lib;
-stdenv.mkDerivation {
+stdenv.mkDerivation rec {
   name = "cups-${version}";
+  version = "2.1.4";
 
   passthru = { inherit version; };
 
   src = fetchurl {
-    url = "https://www.cups.org/software/${version}/cups-${version}-source.tar.bz2";
-    sha256 = "1lyl3z01xhg9xb9c8m42398c6h9kw8qr6jwiv8bjdsjab11hv9rn";
+    url = "https://github.com/apple/cups/releases/download/release-${version}/cups-${version}-source.tar.gz";
+    sha256 = "13bjxw256wd1nff22vj2z25mdhllj2h6d9xypsg55b40661zs52b";
   };
 
+  # FIXME: the cups libraries contains some $out/share strings so can't be split.
+  outputs = [ "out" "dev" "man" ]; # TODO: above
+
   buildInputs = [ pkgconfig zlib libjpeg libpng libtiff libusb gnutls libpaper ]
-    ++ optionals stdenv.isLinux [ avahi pam dbus.libs acl ]
+    ++ optionals stdenv.isLinux [ avahi pam dbus systemd acl ]
     ++ optionals stdenv.isDarwin (with darwin; [
       configd apple_sdk.frameworks.ApplicationServices
     ]);
@@ -68,6 +71,9 @@ stdenv.mkDerivation {
       # Delete obsolete stuff that conflicts with cups-filters.
       rm -rf $out/share/cups/banners $out/share/cups/data/testprint
 
+      mkdir $dev/bin
+      mv $out/bin/cups-config $dev/bin/
+
       # Rename systemd files provided by CUPS
       for f in $out/lib/systemd/system/*; do
         substituteInPlace "$f" \
@@ -90,7 +96,7 @@ stdenv.mkDerivation {
     homepage = https://cups.org/;
     description = "A standards-based printing system for UNIX";
     license = licenses.gpl2; # actually LGPL for the library and GPL for the rest
-    maintainers = with maintainers; [ urkud simons jgeerds ];
+    maintainers = with maintainers; [ urkud jgeerds ];
     platforms = platforms.linux;
   };
 }

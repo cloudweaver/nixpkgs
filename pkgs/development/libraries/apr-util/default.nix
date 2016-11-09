@@ -22,11 +22,14 @@ stdenv.mkDerivation rec {
 
   patches = optional stdenv.isFreeBSD ./include-static-dependencies.patch;
 
+  outputs = [ "out" "dev" ];
+  outputBin = "dev";
+
   buildInputs = optional stdenv.isFreeBSD autoreconfHook;
 
-  configureFlags = [ "--with-apr=${apr}" "--with-expat=${expat}" ]
+  configureFlags = [ "--with-apr=${apr.dev}" "--with-expat=${expat.dev}" ]
     ++ optional (!stdenv.isCygwin) "--with-crypto"
-    ++ optional sslSupport "--with-openssl=${openssl}"
+    ++ optional sslSupport "--with-openssl=${openssl.dev}"
     ++ optional bdbSupport "--with-berkeley-db=${db}"
     ++ optional ldapSupport "--with-ldap=ldap"
     ++ optionals stdenv.isCygwin
@@ -40,9 +43,15 @@ stdenv.mkDerivation rec {
     ++ optional ldapSupport openldap
     ++ optional stdenv.isFreeBSD cyrus_sasl;
 
-  # Give apr1 access to sed for runtime invocations
   postInstall = ''
-    wrapProgram $out/bin/apu-1-config --prefix PATH : "${gnused}/bin"
+    for f in $out/lib/*.la $out/lib/apr-util-1/*.la; do
+      substituteInPlace $f \
+        --replace "${expat.dev}/lib" "${expat.out}/lib" \
+        --replace "${openssl.dev}/lib" "${openssl.out}/lib"
+    done
+
+    # Give apr1 access to sed for runtime invocations.
+    wrapProgram $dev/bin/apu-1-config --prefix PATH : "${gnused}/bin"
   '';
 
   enableParallelBuilding = true;
@@ -55,5 +64,6 @@ stdenv.mkDerivation rec {
     homepage = http://apr.apache.org/;
     description = "A companion library to APR, the Apache Portable Runtime";
     maintainers = [ stdenv.lib.maintainers.eelco ];
+    platforms = stdenv.lib.platforms.unix;
   };
 }

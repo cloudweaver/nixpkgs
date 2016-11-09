@@ -1,4 +1,4 @@
-{ pkgs, stdenv, ghc
+{ pkgs, stdenv, ghc, all-cabal-hashes
 , compilerConfig ? (self: super: {})
 , packageSetConfig ? (self: super: {})
 , overrides ? (self: super: {})
@@ -42,7 +42,7 @@ let
         overrideScope = f: callPackageWithScope (mkScope (fix' (extends f scope.__unfix__))) drv args;
       };
 
-      mkScope = scope: pkgs // pkgs.xorg // pkgs.gnome // scope;
+      mkScope = scope: pkgs // pkgs.xorg // pkgs.gnome2 // scope;
       defaultScope = mkScope self;
       callPackage = drv: args: callPackageWithScope defaultScope drv args;
 
@@ -52,17 +52,35 @@ let
         inherit packages;
       };
 
+      hackage2nix = name: version: pkgs.stdenv.mkDerivation {
+        name = "cabal2nix-${name}-${version}";
+        buildInputs = [ pkgs.cabal2nix ];
+        phases = ["installPhase"];
+        LANG = "en_US.UTF-8";
+        LOCALE_ARCHIVE = pkgs.lib.optionalString pkgs.stdenv.isLinux "${pkgs.glibcLocales}/lib/locale/locale-archive";
+        installPhase = ''
+          export HOME="$TMP"
+          mkdir $out
+          hash=$(sed -e 's/.*"SHA256":"//' -e 's/".*$//' ${all-cabal-hashes}/${name}/${version}/${name}.json)
+          cabal2nix --compiler=${self.ghc.name} --system=${stdenv.system} --sha256=$hash ${all-cabal-hashes}/${name}/${version}/${name}.cabal >$out/default.nix
+        '';
+      };
+
     in
       import ./hackage-packages.nix { inherit pkgs stdenv callPackage; } self // {
 
         inherit mkDerivation callPackage;
+
+        callHackage = name: version: self.callPackage (hackage2nix name version);
 
         ghcWithPackages = selectFrom: withPackages (selectFrom self);
 
         ghcWithHoogle = selectFrom:
           let
             packages = selectFrom self;
-            hoogle = callPackage ./hoogle.nix { inherit packages; };
+            hoogle = callPackage ./hoogle.nix {
+              inherit packages;
+            };
           in withPackages (packages ++ [ hoogle ]);
 
         ghc = ghc // {

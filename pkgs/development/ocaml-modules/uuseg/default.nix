@@ -1,4 +1,4 @@
-{ stdenv, fetchurl, ocaml, findlib, opam, uucp, uutf, cmdliner }:
+{ stdenv, fetchurl, ocaml, findlib, ocamlbuild, opam, uucp, uutf, cmdliner }:
 
 let
   inherit (stdenv.lib) getVersion versionAtLeast;
@@ -19,7 +19,7 @@ stdenv.mkDerivation {
     sha256 = "00n4zi8dyw2yzi4nr2agcrr33b0q4dr9mgnkczipf4c0gm5cm50h";
   };
 
-  buildInputs = [ ocaml findlib opam cmdliner ];
+  buildInputs = [ ocaml findlib ocamlbuild opam cmdliner ];
   propagatedBuildInputs = [ uucp uutf ];
 
   createFindlibDestdir = true;
@@ -40,7 +40,7 @@ stdenv.mkDerivation {
   meta = with stdenv.lib; {
     description = "An OCaml library for segmenting Unicode text";
     homepage = "${webpage}";
-    platforms = ocaml.meta.platforms;
+    platforms = ocaml.meta.platforms or [];
     license = licenses.bsd3;
     maintainers = [ maintainers.vbgl ];
   };

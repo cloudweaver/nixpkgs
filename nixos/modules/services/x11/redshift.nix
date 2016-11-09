@@ -94,11 +94,9 @@ in {
   };
 
   config = mkIf cfg.enable {
-    systemd.services.redshift = {
+    systemd.user.services.redshift = {
       description = "Redshift colour temperature adjuster";
-      requires = [ "display-manager.service" ];
-      after = [ "display-manager.service" ];
-      wantedBy = [ "graphical.target" ];
+      wantedBy = [ "default.target" ];
       serviceConfig = {
         ExecStart = ''
           ${cfg.package}/bin/redshift \
@@ -107,10 +105,15 @@ in {
             -b ${toString cfg.brightness.day}:${toString cfg.brightness.night} \
             ${lib.strings.concatStringsSep " " cfg.extraOptions}
         '';
-	RestartSec = 3;
+        RestartSec = 3;
+        Restart = "always";
       };
-      environment = { DISPLAY = ":0"; };
-      serviceConfig.Restart = "always";
+      environment = {
+        DISPLAY = ":${toString (
+          let display = config.services.xserver.display;
+          in if display != null then display else 0
+        )}";
+      };
     };
   };
 

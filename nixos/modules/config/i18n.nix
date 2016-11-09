@@ -41,6 +41,15 @@ in
         '';
       };
 
+      consolePackages = mkOption {
+        type = types.listOf types.package;
+        default = with pkgs.kbdKeymaps; [ dvp neo ];
+        description = ''
+	  List of additional packages that provide console fonts, keymaps and
+          other resources.
+        '';
+      };
+
       consoleFont = mkOption {
         type = types.str;
         default = "Lat2-Terminus16";
@@ -64,7 +73,6 @@ in
       consoleKeyMap = mkOption {
         type = mkOptionType {
           name = "string or path";
-          typerep = "(stringOrPath)";
           check = t: (isString t || types.path.check t);
         };
 

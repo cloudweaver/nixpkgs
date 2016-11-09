@@ -1,37 +1,34 @@
-{ stdenv, fetchFromGitHub, nim }:
+{ stdenv, fetchFromGitHub, nim, openssl }:
 
-let
-  srcs = {
-    nimble = fetchFromGitHub {
-      owner = "nim-lang";
-      repo = "nimble";
-      rev = "v0.7.2";
-      sha256 = "0j9b519cv91xwn6k0alynakh7grbq4m6yy5bdwdrqmc7lag35r0i";
-    };
-    nim = fetchFromGitHub {
-      owner = "nim-lang";
-      repo = "nim";
-      rev = "v0.13.0";
-      sha256 = "14grhkwdva4wmvihm1413ly86sf0qk96bd473pvsbgkp46cg8rii";
-    };
-  };
-in
 stdenv.mkDerivation rec {
   name = "nimble-${version}";
-  version = "0.7.2";
 
-  src = srcs.nimble;
+  version = "0.7.10";
 
-  buildInputs = [ nim ];
+  src = fetchFromGitHub {
+    owner = "nim-lang";
+    repo = "nimble";
+    rev = "v${version}";
+    sha256 = "1bcv8chir73nn6x7q8n3sw2scf3m0x2w9gkkzx162ryivza1nm1r";
+  };
 
-  postUnpack = ''
-    mkdir -p $sourceRoot/vendor
-    ln -s ${srcs.nim} $sourceRoot/vendor/nim
+  buildInputs = [ nim openssl ];
+
+  patchPhase = ''
+    substituteInPlace src/nimble.nim.cfg --replace "./vendor/nim" "${nim}/share"
+    echo "--clib:crypto" >> src/nimble.nim.cfg
   '';
-  buildPhase   = ''
-    nim c src/nimble
+
+  buildPhase = ''
+    cd src && nim c -d:release nimble
   '';
-  installPhase = "installBin src/nimble";
+
+  installPhase = ''
+    mkdir -p $out/bin
+    cp nimble $out/bin
+  '';
+
+  dontStrip = true;
 
   meta = with stdenv.lib; {
     description = "Package manager for the Nim programming language";

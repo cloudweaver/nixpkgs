@@ -6,18 +6,18 @@ let
   inherit (bootPkgs) ghc;
 
 in stdenv.mkDerivation rec {
-  version = "7.11.20151216";
+  version = "8.1.20161108";
   name = "ghc-${version}";
-  rev = "28638dfe79e915f33d75a1b22c5adce9e2b62b97";
+  rev = "2e8463b232054b788b73e6551947a9434aa76009";
 
   src = fetchgit {
     url = "git://git.haskell.org/ghc.git";
     inherit rev;
-    sha256 = "0rjzkzn0hz1vdnjikcbwfs5ggs8r3y4gqxfdn4jzfp45gx94wiwv";
+    sha256 = "1x1vnb2zr2qrak72bdqh65d00q351yhn8xvv5i4i359cf2xjmgfd";
   };
 
   patches = [
-    ./dont-pass-linker-flags-via-response-files.patch   # https://github.com/NixOS/nixpkgs/issues/10752
+    ./ghc-8.x-dont-pass-linker-flags-via-response-files.patch   # https://github.com/NixOS/nixpkgs/issues/10752
   ];
 
   postUnpack = ''
@@ -42,9 +42,9 @@ in stdenv.mkDerivation rec {
   '';
 
   configureFlags = [
-    "--with-gcc=${stdenv.cc}/bin/cc"
-    "--with-gmp-includes=${gmp}/include" "--with-gmp-libraries=${gmp}/lib"
-    "--with-curses-includes=${ncurses}/include" "--with-curses-libraries=${ncurses}/lib"
+    "--with-cc=${stdenv.cc}/bin/cc"
+    "--with-gmp-includes=${gmp.dev}/include" "--with-gmp-libraries=${gmp.out}/lib"
+    "--with-curses-includes=${ncurses.dev}/include" "--with-curses-libraries=${ncurses.out}/lib"
   ] ++ stdenv.lib.optional stdenv.isDarwin [
     "--with-iconv-includes=${libiconv}/include" "--with-iconv-libraries=${libiconv}/lib"
   ];
@@ -61,7 +61,7 @@ in stdenv.mkDerivation rec {
     for i in "$out/bin/"*; do
       test ! -h $i || continue
       egrep --quiet '^#!' <(head -n 1 $i) || continue
-      sed -i -e '2i export PATH="$PATH:${binutils}/bin:${coreutils}/bin"' $i
+      sed -i -e '2i export PATH="$PATH:${stdenv.lib.makeBinPath [ binutils coreutils ]}"' $i
     done
   '';
 
@@ -72,7 +72,7 @@ in stdenv.mkDerivation rec {
   meta = {
     homepage = "http://haskell.org/ghc";
     description = "The Glasgow Haskell Compiler";
-    maintainers = with stdenv.lib.maintainers; [ marcweber andres simons ];
+    maintainers = with stdenv.lib.maintainers; [ marcweber andres peti ];
     inherit (ghc.meta) license platforms;
   };
 

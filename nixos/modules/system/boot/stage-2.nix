@@ -7,20 +7,22 @@ let
   kernel = config.boot.kernelPackages.kernel;
   activateConfiguration = config.system.activationScripts.script;
 
-  readonlyMountpoint = pkgs.runCommand "readonly-mountpoint" {} ''
-    mkdir -p $out/bin
-    cc -O3 ${./readonly-mountpoint.c} -o $out/bin/readonly-mountpoint
-    strip -s $out/bin/readonly-mountpoint
-  '';
+  readonlyMountpoint = pkgs.stdenv.mkDerivation {
+    name = "readonly-mountpoint";
+    unpackPhase = "true";
+    installPhase = ''
+      mkdir -p $out/bin
+      cc -O3 ${./readonly-mountpoint.c} -o $out/bin/readonly-mountpoint
+    '';
+  };
 
   bootStage2 = pkgs.substituteAll {
     src = ./stage-2-init.sh;
     shellDebug = "${pkgs.bashInteractive}/bin/bash";
     isExecutable = true;
-    inherit (config.boot) devShmSize runSize;
     inherit (config.nix) readOnlyStore;
     inherit (config.networking) useHostResolvConf;
-    ttyGid = config.ids.gids.tty;
+    inherit (config.system.build) earlyMountScript;
     path =
       [ pkgs.coreutils
         pkgs.utillinux

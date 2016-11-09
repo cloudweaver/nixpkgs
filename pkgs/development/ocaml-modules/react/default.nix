@@ -1,15 +1,15 @@
-{stdenv, fetchurl, ocaml, findlib, opam}:
+{ stdenv, fetchurl, ocaml, findlib, ocamlbuild, opam }:
 
 stdenv.mkDerivation {
-  name = "ocaml-react-1.1.0";
+  name = "ocaml-react-1.2.0";
 
   src = fetchurl {
-    url = http://erratique.ch/software/react/releases/react-1.1.0.tbz;
-    sha256 = "1gymn8hy7ga0l9qymmb1jcnnkqvy7l2zr87xavzqz0dfi9ci8dm7";
+    url = http://erratique.ch/software/react/releases/react-1.2.0.tbz;
+    sha256 = "0knhgbngphv5sp1yskfd97crf169qhpc0igr6w7vqw0q36lswyl8";
   };
 
   unpackCmd = "tar xjf $src";
-  buildInputs = [ocaml findlib opam];
+  buildInputs = [ ocaml findlib ocamlbuild opam ];
 
   createFindlibDestdir = true;
 
@@ -29,7 +29,7 @@ stdenv.mkDerivation {
     homepage = http://erratique.ch/software/react;
     description = "Applicative events and signals for OCaml";
     license = licenses.bsd3;
-    platforms = ocaml.meta.platforms;
+    platforms = ocaml.meta.platforms or [];
     maintainers = with maintainers; [ z77z vbmithr gal_bolle];
   };
 }

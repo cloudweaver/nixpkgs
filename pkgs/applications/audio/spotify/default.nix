@@ -1,11 +1,12 @@
-{ fetchurl, stdenv, dpkg, xorg, alsaLib, makeWrapper, openssl_1_0_1, freetype
-, glib, pango, cairo, atk, gdk_pixbuf, gtk, cups, nspr, nss, libpng, GConf
-, libgcrypt, udev, fontconfig, dbus, expat, ffmpeg_0_10, curl, zlib, gnome }:
+{ fetchurl, stdenv, dpkg, xorg, alsaLib, makeWrapper, openssl, freetype
+, glib, pango, cairo, atk, gdk_pixbuf, gtk2, cups, nspr, nss, libpng, GConf
+, libgcrypt, systemd, fontconfig, dbus, expat, ffmpeg_0_10, curl, zlib, gnome2 }:
 
 assert stdenv.system == "x86_64-linux";
 
 let
-  version = "1.0.23.93.gd6cfae15-30";
+  # Please update the stable branch!
+  version = "1.0.38.171.g5e1cd7b2-22";
 
   deps = [
     alsaLib
@@ -21,13 +22,13 @@ let
     GConf
     gdk_pixbuf
     glib
-    gtk
+    gtk2
     libgcrypt
     libpng
     nss
     pango
     stdenv.cc.cc
-    udev
+    systemd
     xorg.libX11
     xorg.libXcomposite
     xorg.libXcursor
@@ -50,28 +51,35 @@ stdenv.mkDerivation {
   src =
     fetchurl {
       url = "http://repository-origin.spotify.com/pool/non-free/s/spotify-client/spotify-client_${version}_amd64.deb";
-      sha256 = "0n6vz51jv6s20dp4zlqkk52bpmpyfm1qn5bfm4lfq09x1g6ir5lr";
+      sha256 = "0mhrbcw92g11czwcclnbwz1pk1jgap4xlya7dqsrcyb50azmv450";
     };
 
   buildInputs = [ dpkg makeWrapper ];
 
-  unpackPhase = "true";
+  unpackPhase = ''
+    runHook preUnpack
+    dpkg-deb -x $src .
+    runHook postUnpack
+  '';
+
+  configurePhase = "runHook preConfigure; runHook postConfigure";
+  buildPhase = "runHook preBuild; runHook postBuild";
 
   installPhase =
     ''
+      runHook preInstall
+
       libdir=$out/lib/spotify
       mkdir -p $libdir
-      dpkg-deb -x $src $out
-      mv $out/usr/* $out/
-      rm -rf $out/usr
+      mv ./usr/* $out/
 
       # Work around Spotify referring to a specific minor version of
       # OpenSSL.
 
-      ln -s ${openssl_1_0_1}/lib/libssl.so $libdir/libssl.so.1.0.0
-      ln -s ${openssl_1_0_1}/lib/libcrypto.so $libdir/libcrypto.so.1.0.0
-      ln -s ${nspr}/lib/libnspr4.so $libdir/libnspr4.so
-      ln -s ${nspr}/lib/libplc4.so $libdir/libplc4.so
+      ln -s ${openssl.out}/lib/libssl.so $libdir/libssl.so.1.0.0
+      ln -s ${openssl.out}/lib/libcrypto.so $libdir/libcrypto.so.1.0.0
+      ln -s ${nspr.out}/lib/libnspr4.so $libdir/libnspr4.so
+      ln -s ${nspr.out}/lib/libplc4.so $libdir/libplc4.so
 
       rpath="$out/share/spotify:$libdir"
 
@@ -82,7 +90,7 @@ stdenv.mkDerivation {
       librarypath="${stdenv.lib.makeLibraryPath deps}:$libdir"
       wrapProgram $out/share/spotify/spotify \
         --prefix LD_LIBRARY_PATH : "$librarypath" \
-        --prefix PATH : "${gnome.zenity}/bin"
+        --prefix PATH : "${gnome2.zenity}/bin"
 
       # Desktop file
       mkdir -p "$out/share/applications/"
@@ -95,6 +103,8 @@ stdenv.mkDerivation {
         ln -s "$out/share/spotify/icons/spotify-linux-$i.png" \
           "$out/share/icons/hicolor/$ixi/apps/spotify-client.png"
       done
+
+      runHook postInstall
     '';
 
   dontStrip = true;
@@ -104,6 +114,6 @@ stdenv.mkDerivation {
     homepage = https://www.spotify.com/;
     description = "Play music from the Spotify music service";
     license = stdenv.lib.licenses.unfree;
-    maintainers = with stdenv.lib.maintainers; [ eelco ftrvxmtrx ];
+    maintainers = with stdenv.lib.maintainers; [ eelco ftrvxmtrx sheenobu mudri ];
   };
 }

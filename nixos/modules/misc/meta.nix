@@ -5,7 +5,6 @@ with lib;
 let
   maintainer = mkOptionType {
     name = "maintainer";
-    typerep = "(maintainer)";
     check = email: elem email (attrValues lib.maintainers);
     merge = loc: defs: listToAttrs (singleton (nameValuePair (last defs).file (last defs).value));
   };
@@ -40,7 +39,7 @@ in
         default = [];
         example = [ lib.maintainers.all ];
         description = ''
-	  List of maintainers of each module.  This option should be defined at
+          List of maintainers of each module.  This option should be defined at
           most once per module.
         '';
       };
@@ -50,7 +49,7 @@ in
         internal = true;
         example = "./meta.xml";
         description = ''
-	  Documentation prologe for the set of options of each module.  This
+          Documentation prologe for the set of options of each module.  This
           option should be defined at most once per module.
         '';
       };
@@ -58,7 +57,5 @@ in
     };
   };
 
-  config = {
-    meta.maintainers = singleton lib.maintainers.pierron;
-  };
+  meta.maintainers = singleton lib.maintainers.pierron;
 }

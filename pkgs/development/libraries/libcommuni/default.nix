@@ -1,24 +1,29 @@
-{ fetchgit, qt5, stdenv
+{ stdenv, fetchFromGitHub, qtbase, qtdeclarative, qmakeHook, which
 }:
 
 stdenv.mkDerivation rec {
   name = "libcommuni-${version}";
-  version = "2016-01-02";
+  version = "2016-08-17";
 
-  src = fetchgit {
-    url = "https://github.com/communi/libcommuni.git";
-    rev = "779b0c774428669235d44d2db8e762558e2f4b79";
-    sha256 = "15sb7vinaaz1v5nclxpnp5p9a0kmfmlgiqibkipnyydizclidpfx";
+  src = fetchFromGitHub {
+    owner = "communi";
+    repo = "libcommuni";
+    rev = "dedba6faf57c31c8c70fd563ba12d75a9caee8a3";
+    sha256 = "0wvs53z34vfs5xlln4a6sbd4981svag89xm0f4k20mb1i052b20i";
   };
 
-  buildInputs = [ qt5.qtbase ];
+  buildInputs = [ qtbase qtdeclarative ];
+  nativeBuildInputs = [ qmakeHook which ];
 
-  enableParallelBuild = true;
+  enableParallelBuilding = true;
 
-  configurePhase = ''
+  dontUseQmakeConfigure = true;
+  configureFlags = "-config release";
+  preConfigure = ''
     sed -i -e 's|/bin/pwd|pwd|g' configure
-    ./configure -config release -prefix $out -qmake ${qt5.qtbase}/bin/qmake
   '';
+
+  doCheck = true;
 
   meta = with stdenv.lib; {
     description = "A cross-platform IRC framework written with Qt";

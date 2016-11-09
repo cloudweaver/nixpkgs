@@ -1,29 +1,29 @@
-{ stdenv, fetchgit, alsaLib, pkgconfig, gtk3, glibc, autoconf, automake, libnotify, libX11, gettext }:
+{ stdenv, fetchFromGitHub, pkgconfig, intltool, autoconf, automake, alsaLib, gtk3, glibc, libnotify, libX11 }:
 
 stdenv.mkDerivation rec {
-  name = "pnmixer-2014-07-24";
+  name = "pnmixer-${version}";
+  version = "0.7";
 
-  src = fetchgit {
-    url = "git://github.com/nicklan/pnmixer.git";
-    rev = "1e09a075c0c63d8b161b13ea92528a798bdb464a";
-    sha256 = "15k689xycpc6pvq9vgg9ak92b9sg09dh4yrh83kjcaws63alrzl5";
+  src = fetchFromGitHub {
+    owner = "nicklan";
+    repo = "pnmixer";
+    rev = "v${version}";
+    sha256 = "077l28qhr82ifqfwc2nqi5q1hmi6dyqqbhmjcsn27p4y433f3rpb";
   };
 
-  buildInputs = [
-    alsaLib pkgconfig gtk3 glibc autoconf automake libnotify libX11 gettext
-  ];
+  nativeBuildInputs = [ pkgconfig autoconf automake intltool ];
+
+  buildInputs = [ alsaLib gtk3 glibc libnotify libX11 ];
 
   preConfigure = ''
     ./autogen.sh
   '';
 
-  # work around a problem related to gtk3 updates
-  NIX_CFLAGS_COMPILE = "-Wno-error=deprecated-declarations";
-
   meta = with stdenv.lib; {
+    homepage = https://github.com/nicklan/pnmixer;
     description = "ALSA mixer for the system tray";
     license = licenses.gpl3;
-    maintainers = with maintainers; [ campadrenalin ];
     platforms = platforms.linux;
+    maintainers = with maintainers; [ campadrenalin romildo ];
   };
 }

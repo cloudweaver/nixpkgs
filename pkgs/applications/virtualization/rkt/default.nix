@@ -1,31 +1,35 @@
 { stdenv, lib, autoreconfHook, acl, go, file, git, wget, gnupg1, trousers, squashfsTools,
-  cpio, fetchurl, fetchFromGitHub, iptables, systemd, makeWrapper }:
+  cpio, fetchurl, fetchFromGitHub, iptables, systemd, makeWrapper, glibc }:
 
 let
-  coreosImageRelease = "794.1.0";
-  coreosImageSystemdVersion = "222";
+  # Always get the information from
+  # https://github.com/coreos/rkt/blob/v${VERSION}/stage1/usr_from_coreos/coreos-common.mk
+  coreosImageRelease = "1192.0.0";
+  coreosImageSystemdVersion = "231";
 
   # TODO: track https://github.com/coreos/rkt/issues/1758 to allow "host" flavor.
-  stage1Flavours = [ "coreos" "fly" "host" ];
+  stage1Flavours = [ "coreos" "fly" ];
+  stage1Dir = "lib/rkt/stage1-images";
 
 in stdenv.mkDerivation rec {
-  version = "1.0.0";
+  version = "1.18.0";
   name = "rkt-${version}";
   BUILDDIR="build-${name}";
 
   src = fetchFromGitHub {
-      rev = "v${version}";
       owner = "coreos";
       repo = "rkt";
-      sha256 = "1m76hzx550dh35jpb8m46ks04ac3dfy4rg054v035rpwgh50ac6h";
+      rev = "v${version}";
+      sha256 = "0vvkwdpl9y0g5m00m1h7q8f95hj5qxigpxrb5zwfqrcv3clzn5a6";
   };
 
   stage1BaseImage = fetchurl {
     url = "http://alpha.release.core-os.net/amd64-usr/${coreosImageRelease}/coreos_production_pxe_image.cpio.gz";
-    sha256 = "05nzl3av6cawr8v203a8c95c443g6h1nfy2n4jmgvn0j4iyy44ym";
+    sha256 = "1j75ad1g217aqar84m9ycl2m71g821hq9yahl4bgjaipx9xnj23g";
   };
 
   buildInputs = [
+    glibc.out glibc.static
     autoreconfHook go file git wget gnupg1 trousers squashfsTools cpio acl systemd
     makeWrapper
   ];
@@ -38,6 +42,7 @@ in stdenv.mkDerivation rec {
       --with-coreos-local-pxe-image-path=${stage1BaseImage}
       --with-coreos-local-pxe-image-systemd-version=v${coreosImageSystemdVersion}
       " else "" }
+      --with-stage1-default-location=$out/${stage1Dir}/stage1-${builtins.elemAt stage1Flavours 0}.aci
     );
   '';
 
@@ -47,9 +52,13 @@ in stdenv.mkDerivation rec {
 
   installPhase = ''
     mkdir -p $out/bin
-    cp -Rv $BUILDDIR/bin/* $out/bin
+    cp -Rv $BUILDDIR/target/bin/rkt $out/bin
+
+    mkdir -p $out/lib/rkt/stage1-images/
+    cp -Rv $BUILDDIR/target/bin/stage1-*.aci $out/${stage1Dir}/
+
     wrapProgram $out/bin/rkt \
-      --prefix LD_LIBRARY_PATH : ${systemd}/lib \
+      --prefix LD_LIBRARY_PATH : ${systemd.lib}/lib \
       --prefix PATH : ${iptables}/bin
   '';
 

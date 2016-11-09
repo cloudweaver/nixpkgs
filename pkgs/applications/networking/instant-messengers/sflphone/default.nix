@@ -40,7 +40,7 @@ rec {
       cd ..
     '';
 
-    configureFlags = "--with-expat --with-expat-inc=${expat}/include " +
+    configureFlags = "--with-expat --with-expat-inc=${expat.dev}/include " +
       "--with-expat-lib=-lexpat --with-opus ";
 
     buildInputs = [ libyaml alsaLib openssl libuuid pkgconfig libpulseaudio libsamplerate
@@ -77,7 +77,7 @@ rec {
     # gtk3 programs have the runtime dependency on XDG_DATA_DIRS
     preFixup = ''
       for f in "$out/bin/sflphone" "$out/bin/sflphone-client-gnome"; do
-        wrapProgram $f --prefix XDG_DATA_DIRS ":" "${gtk}/share:$GSETTINGS_SCHEMAS_PATH"
+        wrapProgram $f --prefix XDG_DATA_DIRS ":" "${gtk.out}/share:$GSETTINGS_SCHEMAS_PATH"
       done
     '';
 

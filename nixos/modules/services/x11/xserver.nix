@@ -13,9 +13,10 @@ let
 
   # Map video driver names to driver packages. FIXME: move into card-specific modules.
   knownVideoDrivers = {
-    virtualbox   = { modules = [ kernelPackages.virtualboxGuestAdditions ]; driverName = "vboxvideo"; };
-    ati = { modules = [ pkgs.xorg.xf86videoati pkgs.xorg.glamoregl ]; };
-    intel-testing = { modules = with pkgs.xorg; [ xf86videointel-testing glamoregl ]; driverName = "intel"; };
+    virtualbox = { modules = [ kernelPackages.virtualboxGuestAdditions ]; driverName = "vboxvideo"; };
+
+    # modesetting does not have a xf86videomodesetting package as it is included in xorgserver
+    modesetting = {};
   };
 
   fontsForXServer =
@@ -70,15 +71,11 @@ let
     monitors = reverseList (foldl mkMonitor [] xrandrHeads);
   in concatMapStrings (getAttr "value") monitors;
 
-  configFile = pkgs.stdenv.mkDerivation {
-    name = "xserver.conf";
-
-    xfs = optionalString (cfg.useXFS != false)
-      ''FontPath "${toString cfg.useXFS}"'';
-
-    inherit (cfg) config;
-
-    buildCommand =
+  configFile = pkgs.runCommand "xserver.conf"
+    { xfs = optionalString (cfg.useXFS != false)
+        ''FontPath "${toString cfg.useXFS}"'';
+      inherit (cfg) config;
+    }
       ''
         echo 'Section "Files"' >> $out
         echo $xfs >> $out
@@ -101,7 +98,6 @@ let
 
         echo "$config" >> $out
       ''; # */
-  };
 
 in
 
@@ -153,6 +149,22 @@ in
         '';
       };
 
+      autoRepeatDelay = mkOption {
+        type = types.nullOr types.int;
+        default = null;
+        description = ''
+          Sets the autorepeat delay (length of time in milliseconds that a key must be depressed before autorepeat starts).
+        '';
+      };
+
+      autoRepeatInterval = mkOption {
+        type = types.nullOr types.int;
+        default = null;
+        description = ''
+          Sets the autorepeat interval (length of time in milliseconds that should elapse between autorepeat-generated keystrokes).
+        '';
+      };
+
       inputClassSections = mkOption {
         type = types.listOf types.lines;
         default = [];
@@ -160,7 +172,7 @@ in
           [ '''
               Identifier      "Trackpoint Wheel Emulation"
               MatchProduct    "ThinkPad USB Keyboard with TrackPoint"
-              Option          "EmulateWheel"          "true
+              Option          "EmulateWheel"          "true"
               Option          "EmulateWheelButton"    "2"
               Option          "Emulate3Buttons"       "false"
             '''
@@ -219,15 +231,10 @@ in
         '';
       };
 
-      startGnuPGAgent = mkOption {
-        type = types.bool;
-        default = false;
-        description = ''
-          Whether to start the GnuPG agent when you log in.  The GnuPG agent
-          remembers private keys for you so that you don't have to type in
-          passphrases every time you make an SSH connection or sign/encrypt
-          data.  Use <command>ssh-add</command> to add a key to the agent.
-        '';
+      dpi = mkOption {
+        type = types.nullOr types.int;
+        default = null;
+        description = "DPI resolution to use for X server.";
       };
 
       startDbusSession = mkOption {
@@ -235,6 +242,15 @@ in
         default = true;
         description = ''
           Whether to start a new DBus session when you log in with dbus-launch.
+        '';
+      };
+
+      updateDbusEnvironment = mkOption {
+        type = types.bool;
+        default = false;
+        description = ''
+          Whether to update the DBus activation environment after launching the
+          desktop manager.
         '';
       };
 
@@ -441,17 +457,10 @@ in
            then { modules = [xorg.${"xf86video" + name}]; }
            else null)
           knownVideoDrivers;
-      in optional (driver != null) ({ inherit name; driverName = name; } // driver));
+      in optional (driver != null) ({ inherit name; modules = []; driverName = name; } // driver));
 
     assertions =
-      [ { assertion = !(config.programs.ssh.startAgent && cfg.startGnuPGAgent);
-          message =
-            ''
-              The OpenSSH agent and GnuPG agent cannot be started both. Please
-              choose between ‘programs.ssh.startAgent’ and ‘services.xserver.startGnuPGAgent’.
-            '';
-        }
-        { assertion = config.security.polkit.enable;
+      [ { assertion = config.security.polkit.enable;
           message = "X11 requires Polkit to be enabled (‘security.polkit.enable = true’).";
         }
       ];
@@ -465,10 +474,17 @@ in
           { source = "${cfg.xkbDir}";
             target = "X11/xkb";
           }
-        ]);
+        ])
+      # Needed since 1.18; see https://bugs.freedesktop.org/show_bug.cgi?id=89023#c5
+      ++ (let cfgPath = "/X11/xorg.conf.d/10-evdev.conf"; in
+        [{
+          source = xorg.xf86inputevdev.out + "/share" + cfgPath;
+          target = cfgPath;
+        }]
+      );
 
     environment.systemPackages =
-      [ xorg.xorgserver
+      [ xorg.xorgserver.out
         xorg.xrandr
         xorg.xrdb
         xorg.setxkbmap
@@ -478,8 +494,10 @@ in
         xorg.xsetroot
         xorg.xinput
         xorg.xprop
+        xorg.xauth
         pkgs.xterm
         pkgs.xdg_utils
+        xorg.xf86inputevdev.out # get evdev.4 man page
       ]
       ++ optional (elem "virtualbox" cfg.videoDrivers) xorg.xrefresh;
 
@@ -497,15 +515,15 @@ in
       { description = "X11 Server";
 
         after = [ "systemd-udev-settle.service" "local-fs.target" "acpid.service" "systemd-logind.service" ];
+        wants = [ "systemd-udev-settle.service" ];
 
         restartIfChanged = false;
 
         environment =
           {
-            XKB_BINDIR = "${xorg.xkbcomp}/bin"; # Needed for the Xkb extension.
             XORG_DRI_DRIVER_PATH = "/run/opengl-driver/lib/dri"; # !!! Depends on the driver selected at runtime.
             LD_LIBRARY_PATH = concatStringsSep ":" (
-              [ "${xorg.libX11}/lib" "${xorg.libXext}/lib" ]
+              [ "${xorg.libX11.out}/lib" "${xorg.libXext.out}/lib" "/run/opengl-driver/lib" ]
               ++ concatLists (catAttrs "libPath" cfg.drivers));
           } // cfg.displayManager.job.environment;
 
@@ -521,23 +539,31 @@ in
         serviceConfig = {
           Restart = "always";
           RestartSec = "200ms";
+          SyslogIdentifier = "display-manager";
+          # Stop restarting if the display manager stops (crashes) 2 times
+          # in one minute. Starting X typically takes 3-4s.
+          StartLimitInterval = "30s";
+          StartLimitBurst = "3";
         };
       };
 
     services.xserver.displayManager.xserverArgs =
-      [ "-ac"
-        "-terminate"
+      [ "-terminate"
         "-config ${configFile}"
         "-xkbdir" "${cfg.xkbDir}"
+        # Log at the default verbosity level to stderr rather than /var/log/X.*.log.
+        "-verbose" "3" "-logfile" "/dev/null"
       ] ++ optional (cfg.display != null) ":${toString cfg.display}"
         ++ optional (cfg.tty     != null) "vt${toString cfg.tty}"
-        ++ optionals (cfg.display != null) [ "-logfile" "/var/log/X.${toString cfg.display}.log" ]
-        ++ optional (!cfg.enableTCP) "-nolisten tcp";
+        ++ optional (cfg.dpi     != null) "-dpi ${toString cfg.dpi}"
+        ++ optional (!cfg.enableTCP) "-nolisten tcp"
+        ++ optional (cfg.autoRepeatDelay != null) "-ardelay ${toString cfg.autoRepeatDelay}"
+        ++ optional (cfg.autoRepeatInterval != null) "-arinterval ${toString cfg.autoRepeatInterval}";
 
     services.xserver.modules =
       concatLists (catAttrs "modules" cfg.drivers) ++
-      [ xorg.xorgserver
-        xorg.xf86inputevdev
+      [ xorg.xorgserver.out
+        xorg.xf86inputevdev.out
       ];
 
     services.xserver.xkbDir = mkDefault "${pkgs.xkeyboard_config}/etc/X11/xkb";
@@ -644,6 +670,8 @@ in
 
         ${xrandrMonitorSections}
       '';
+
+    fonts.enableDefaultFonts = mkDefault true;
 
   };
 

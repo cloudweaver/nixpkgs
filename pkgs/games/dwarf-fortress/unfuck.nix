@@ -1,26 +1,27 @@
-{ stdenv, fetchgit, cmake
-, mesa, SDL, SDL_image, SDL_ttf, glew, openalSoft
-, ncurses, glib, gtk2, libsndfile
+{ stdenv, fetchFromGitHub, cmake
+, mesa_noglu, libSM, SDL, SDL_image, SDL_ttf, glew, openalSoft
+, ncurses, glib, gtk2, libsndfile, zlib
 }:
 
 stdenv.mkDerivation {
-  name = "dwarf_fortress_unfuck-20160118";
+  name = "dwarf_fortress_unfuck-2016-07-13";
 
-  src = fetchgit {
-    url = "https://github.com/svenstaro/dwarf_fortress_unfuck";
-    rev = "9a796c6d3cd7d41784e9d1d22a837a1ee0ff8553";
-    sha256 = "0ibxdn684zpk3v2gigardq6z9mydc2s9hns8hlxjyyyhnk1ar61g";
+  src = fetchFromGitHub {
+    owner = "svenstaro";
+    repo = "dwarf_fortress_unfuck";
+    rev = "d6a4ee67e7b41bec1caa87548640643db35a6080";
+    sha256 = "17p7jzmwd5z54wn6bxmic0i8y8mma3q359zcy3r9x2mp2wv1yd7p";
   };
 
   cmakeFlags = [
-    "-DGTK2_GLIBCONFIG_INCLUDE_DIR=${glib}/lib/glib-2.0/include"
-    "-DGTK2_GDKCONFIG_INCLUDE_DIR=${gtk2}/lib/gtk-2.0/include"
+    "-DGTK2_GLIBCONFIG_INCLUDE_DIR=${glib.out}/lib/glib-2.0/include"
+    "-DGTK2_GDKCONFIG_INCLUDE_DIR=${gtk2.out}/lib/gtk-2.0/include"
   ];
 
   nativeBuildInputs = [ cmake ];
   buildInputs = [
-    mesa SDL SDL_image SDL_ttf glew openalSoft
-    ncurses gtk2 libsndfile
+    libSM SDL SDL_image SDL_ttf glew openalSoft
+    ncurses gtk2 libsndfile zlib mesa_noglu
   ];
 
   installPhase = ''
@@ -29,13 +30,13 @@ stdenv.mkDerivation {
 
   enableParallelBuilding = true;
 
-  passthru.dfVersion = "0.42.05";
+  passthru.dfVersion = "0.43.05";
 
   meta = with stdenv.lib; {
     description = "Unfucked multimedia layer for Dwarf Fortress";
     homepage = https://github.com/svenstaro/dwarf_fortress_unfuck;
     license = licenses.free;
-    platforms = [ "i686-linux" ];
+    platforms = platforms.linux;
     maintainers = with maintainers; [ abbradar ];
   };
 }

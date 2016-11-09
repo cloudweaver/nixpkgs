@@ -15,6 +15,7 @@ stdenv.mkDerivation {
   '';
 
   preInstall = ''
+    rm -f INSTALL
     mkdir -p $out/bin
   '';
 
@@ -23,5 +24,6 @@ stdenv.mkDerivation {
     license = lib.licenses.cpl10;
     maintainers = [ lib.maintainers.roconnor ];
     description = "A C Library for Semidefinite Programming";
+    platforms = stdenv.lib.platforms.unix;
   };
 }

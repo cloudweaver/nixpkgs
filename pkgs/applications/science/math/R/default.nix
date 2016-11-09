@@ -7,11 +7,11 @@
 }:
 
 stdenv.mkDerivation rec {
-  name = "R-3.2.3";
+  name = "R-3.2.4";
 
   src = fetchurl {
     url = "http://cran.r-project.org/src/base/R-3/${name}.tar.gz";
-    sha256 = "b93b7d878138279234160f007cb9b7f81b8a72c012a15566e9ec5395cfd9b6c1";
+    sha256 = "0l6k3l3cy6fa9xkn23zvz5ykpw10s45779x88yz3pzn2x5gl1zds";
   };
 
   buildInputs = [ bzip2 gfortran libX11 libXmu libXt
@@ -48,7 +48,6 @@ stdenv.mkDerivation rec {
       CXX=$(type -p g++)
       FC="${gfortran}/bin/gfortran" F77="${gfortran}/bin/gfortran"
       JAVA_HOME="${jdk}"
-      LDFLAGS="-L${gfortran.cc}/lib"
       RANLIB=$(type -p ranlib)
       R_SHELL="${stdenv.shell}"
   '' + stdenv.lib.optionalString stdenv.isDarwin ''
@@ -103,6 +102,6 @@ stdenv.mkDerivation rec {
     platforms = stdenv.lib.platforms.all;
     hydraPlatforms = stdenv.lib.platforms.linux;
 
-    maintainers = [ stdenv.lib.maintainers.simons ];
+    maintainers = [ stdenv.lib.maintainers.peti ];
   };
 }

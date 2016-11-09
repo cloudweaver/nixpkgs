@@ -2,12 +2,13 @@
 
 python3Packages.buildPythonApplication rec {
   name = "borgbackup-${version}";
-  version = "0.30.0";
+  version = "1.0.8";
   namePrefix = "";
 
   src = fetchurl {
-    url = "https://pypi.python.org/packages/source/b/borgbackup/borgbackup-${version}.tar.gz";
-    sha256 = "0n78c982kdfqbyi9jawcvzgdik4l36c2s7rpzkfr1ka6506k2rx4";
+    url = "https://github.com/borgbackup/borg/releases/download/"
+      + "${version}/${name}.tar.gz";
+    sha256 = "1fdfi0yzzdrrlml6780n4fh61sqm7pw6fcd1y67kfkvw8hy5c0k9";
   };
 
   nativeBuildInputs = with python3Packages; [
@@ -21,8 +22,8 @@ python3Packages.buildPythonApplication rec {
   ]);
 
   preConfigure = ''
-    export BORG_OPENSSL_PREFIX="${openssl}"
-    export BORG_LZ4_PREFIX="${lz4}"
+    export BORG_OPENSSL_PREFIX="${openssl.dev}"
+    export BORG_LZ4_PREFIX="${lz4.dev}"
   '';
 
   postInstall = ''

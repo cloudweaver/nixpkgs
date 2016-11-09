@@ -1,18 +1,18 @@
 { stdenv, fetchFromGitHub, cmake, perl
 , file, glib, gmime, libevent, luajit, openssl, pcre, pkgconfig, sqlite }:
 
-let libmagic = file;  # libmagic provided buy file package ATM
+let libmagic = file;  # libmagic provided by file package ATM
 in
 
 stdenv.mkDerivation rec {
   name = "rspamd-${version}";
-  version = "1.1.3";
+  version = "1.2.7";
 
   src = fetchFromGitHub {
     owner = "vstakhov";
     repo = "rspamd";
     rev = version;
-    sha256 = "0mvh812a91yqynmcpv159dmkipx72fwg7rgscq7virzphchkbzvj";
+    sha256 = "0wr9lndg5fpsrjknm828zj0zy7zvdqrak9bdr6pga3bnq6xabbik";
   };
 
   nativeBuildInputs = [ cmake pkgconfig perl ];
@@ -32,8 +32,9 @@ stdenv.mkDerivation rec {
 
   meta = with stdenv.lib; {
     homepage = "https://github.com/vstakhov/rspamd";
-    license = licenses.bsd2;
-    description = "advanced spam filtering system";
+    license = licenses.asl20;
+    description = "Advanced spam filtering system";
     maintainers = with maintainers; [ avnik fpletz ];
+    platforms = with platforms; linux;
   };
 }

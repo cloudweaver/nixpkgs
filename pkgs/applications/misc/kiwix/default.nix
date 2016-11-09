@@ -1,9 +1,7 @@
-{ stdenv, fetchurl, makeWrapper, pkgconfig, zip, python
-, zlib, xapian, which , icu, libmicrohttpd , lzma, zimlib
-, ctpp2, aria2, wget , bc, libuuid , glibc, libX11
-, libXext, libXt, libXrender , glib, dbus, dbus_glib, gtk
-, gdk_pixbuf, pango, cairo , freetype, fontconfig, alsaLib
-, atk
+{ stdenv, callPackage, overrideCC, fetchurl, makeWrapper, pkgconfig
+, zip, python, zlib, which, icu, libmicrohttpd, lzma, ctpp2, aria2, wget, bc
+, libuuid, glibc, libX11, libXext, libXt, libXrender, glib, dbus, dbus_glib
+, gtk2, gdk_pixbuf, pango, cairo , freetype, fontconfig, alsaLib, atk
 }:
 
 let
@@ -30,6 +28,9 @@ let
     url = http://download.kiwix.org/dev/pugixml-1.2.tar.gz;
     sha256 = "0sqk0vdwjq44jxbbkj1cy8qykrmafs1sickzldb2w2nshsnjshhg";
   };
+
+  xapian = callPackage ../../../development/libraries/xapian { inherit stdenv; };
+  zimlib = callPackage ../../../development/libraries/zimlib { inherit stdenv; };
 
 in
 with stdenv.lib;
@@ -93,11 +94,11 @@ stdenv.mkDerivation rec {
     make install
     cp -r src/dependencies/xulrunner $out/lib/kiwix
 
-    patchelf --set-interpreter ${glibc}/lib/ld-linux${optionalString (stdenv.system == "x86_64-linux") "-x86-64"}.so.2 $out/lib/kiwix/xulrunner/xulrunner
+    patchelf --set-interpreter ${glibc.out}/lib/ld-linux${optionalString (stdenv.system == "x86_64-linux") "-x86-64"}.so.2 $out/lib/kiwix/xulrunner/xulrunner
 
     rm $out/bin/kiwix
     makeWrapper $out/lib/kiwix/kiwix-launcher $out/bin/kiwix \
-      --suffix LD_LIBRARY_PATH : `cat ${stdenv.cc}/nix-support/orig-cc`/lib:${makeLibraryPath [libX11 libXext libXt libXrender glib dbus dbus_glib gtk gdk_pixbuf pango cairo freetype fontconfig alsaLib atk]} \
+      --suffix LD_LIBRARY_PATH : ${makeLibraryPath [stdenv.cc.cc libX11 libXext libXt libXrender glib dbus dbus_glib gtk2 gdk_pixbuf pango cairo freetype fontconfig alsaLib atk]} \
       --suffix PATH : ${aria2}/bin
   '';
 

@@ -1,20 +1,26 @@
-{ stdenv, fetchurl, zlib, ncurses ? null, perl ? null, pam, systemd ? null
-, pkgconfig
-}:
+{ lib, stdenv, fetchurl, pkgconfig, zlib, libseccomp, fetchpatch, autoreconfHook, ncurses ? null, perl ? null, pam, systemd, minimal ? false }:
 
 stdenv.mkDerivation rec {
-  name = "util-linux-2.27.1";
+  name = "util-linux-${version}";
+  version = lib.concatStringsSep "." ([ majorVersion ]
+    ++ lib.optional (patchVersion != "") patchVersion);
+  majorVersion = "2.28";
+  patchVersion = "1";
 
   src = fetchurl {
-    url = "mirror://kernel/linux/utils/util-linux/v2.27/${name}.tar.xz";
-    sha256 = "1452hz5zx56a3mad8yrg5wb0vy5zi19mpjp6zx1yr6p9xp6qz08a";
+    url = "mirror://kernel/linux/utils/util-linux/v${majorVersion}/${name}.tar.xz";
+    sha256 = "03xnaw3c7pavxvvh1vnimcr44hlhhf25whawiyv8dxsflfj4xkiy";
   };
-
-  outputs = [ "out" "man" ];
 
   patches = [
     ./rtcwake-search-PATH-for-shutdown.patch
-  ];
+    (fetchpatch {
+      name = "CVE-2016-2779.diff";
+      url = https://github.com/karelzak/util-linux/commit/8e4925016875c6a4f2ab4f833ba66f0fc57396a2.patch;
+      sha256 = "0kmigkq4s1b1ijrq8vcg2a5cw4qnm065m7cb1jn1q1f4x99ycy60";
+  })];
+
+  outputs = [ "bin" "dev" "out" "man" ];
 
   #FIXME: make it also work on non-nixos?
   postPatch = ''
@@ -46,22 +52,30 @@ stdenv.mkDerivation rec {
     ''}
   '';
 
+  makeFlags = "usrbin_execdir=$(bin)/bin usrsbin_execdir=$(bin)/sbin";
+
+  # autoreconfHook is required for CVE-2016-2779
+  nativeBuildInputs = [ pkgconfig autoreconfHook ];
+  # libseccomp is required for CVE-2016-2779
   buildInputs =
-    [ zlib pam ]
-    ++ stdenv.lib.optional (ncurses != null) ncurses
-    ++ stdenv.lib.optional (systemd != null) [ systemd pkgconfig ]
-    ++ stdenv.lib.optional (perl != null) perl;
+    [ zlib pam libseccomp ]
+    ++ lib.optional (ncurses != null) ncurses
+    ++ lib.optional (systemd != null) systemd
+    ++ lib.optional (perl != null) perl;
 
   postInstall = ''
-    rm $out/bin/su # su should be supplied by the su package (shadow)
+    rm "$bin/bin/su" # su should be supplied by the su package (shadow)
+  '' + lib.optionalString minimal ''
+    rm -rf $out/share/{locale,doc,bash-completion}
   '';
 
   enableParallelBuilding = true;
 
-  meta = {
-    homepage = http://www.kernel.org/pub/linux/utils/util-linux/;
+  meta = with lib; {
+    homepage = https://www.kernel.org/pub/linux/utils/util-linux/;
     description = "A set of system utilities for Linux";
-    platforms = stdenv.lib.platforms.linux;
+    license = licenses.gpl2; # also contains parts under more permissive licenses
+    platforms = platforms.linux;
     priority = 6; # lower priority than coreutils ("kill") and shadow ("login" etc.) packages
   };
 }

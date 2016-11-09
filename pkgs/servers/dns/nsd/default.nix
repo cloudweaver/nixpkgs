@@ -13,11 +13,11 @@
 }:
 
 stdenv.mkDerivation rec {
-  name = "nsd-4.1.7";
+  name = "nsd-4.1.13";
 
   src = fetchurl {
     url = "http://www.nlnetlabs.nl/downloads/nsd/${name}.tar.gz";
-    sha256 = "12hskfgfbkvcgpa1xxkqd8lnc6xvln1amn97x6avfnj9kfrbxa3v";
+    sha256 = "1bwiabj1m7h14ppsa2azw017dqkqjgdl9gmj6ghjg80146xd8p64";
   };
 
   buildInputs = [ libevent openssl ];
@@ -35,7 +35,7 @@ stdenv.mkDerivation rec {
      ++ edf rootServer       "root-server"
      ++ edf rrtypes          "draft-rrtypes"
      ++ edf zoneStats        "zone-stats"
-     ++ [ "--with-ssl=${openssl}" "--with-libevent=${libevent}" ];
+     ++ [ "--with-ssl=${openssl.dev}" "--with-libevent=${libevent.dev}" ];
 
   meta = with stdenv.lib; {
     homepage = http://www.nlnetlabs.nl;

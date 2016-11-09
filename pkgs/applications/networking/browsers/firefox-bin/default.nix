@@ -1,7 +1,8 @@
-{ stdenv, fetchurl, config
+{ stdenv, fetchurl, config, makeWrapper
 , alsaLib
 , atk
 , cairo
+, curl
 , cups
 , dbus_glib
 , dbus_libs
@@ -13,9 +14,11 @@
 , glibc
 , gst_plugins_base
 , gstreamer
-, gtk
+, gtk2
+, gtk3
 , libX11
 , libXScrnSaver
+, libxcb
 , libXcomposite
 , libXdamage
 , libXext
@@ -23,9 +26,10 @@
 , libXinerama
 , libXrender
 , libXt
-, libcanberra
+, libcanberra_gtk2
 , libgnome
 , libgnomeui
+, defaultIconTheme
 , mesa
 , nspr
 , nss
@@ -33,14 +37,15 @@
 , libheimdal
 , libpulseaudio
 , systemd
+, generated ? import ./sources.nix
 }:
 
 assert stdenv.isLinux;
 
-# imports `version` and `sources`
-with (import ./sources.nix);
-
 let
+
+  inherit (generated) version sources;
+
   arch = if stdenv.system == "i686-linux"
     then "linux-i686"
     else "linux-x86_64";
@@ -62,10 +67,7 @@ in
 stdenv.mkDerivation {
   name = "firefox-bin-unwrapped-${version}";
 
-  src = fetchurl {
-    url = "http://download-installer.cdn.mozilla.net/pub/firefox/releases/${version}/${source.arch}/${source.locale}/firefox-${version}.tar.bz2";
-    inherit (source) sha256;
-  };
+  src = fetchurl { inherit (source) url sha512; };
 
   phases = "unpackPhase installPhase";
 
@@ -74,6 +76,7 @@ stdenv.mkDerivation {
       alsaLib
       atk
       cairo
+      curl
       cups
       dbus_glib
       dbus_libs
@@ -85,17 +88,19 @@ stdenv.mkDerivation {
       glibc
       gst_plugins_base
       gstreamer
-      gtk
+      gtk2
+      gtk3
       libX11
       libXScrnSaver
       libXcomposite
+      libxcb
       libXdamage
       libXext
       libXfixes
       libXinerama
       libXrender
       libXt
-      libcanberra
+      libcanberra_gtk2
       libgnome
       libgnomeui
       mesa
@@ -104,10 +109,13 @@ stdenv.mkDerivation {
       pango
       libheimdal
       libpulseaudio
+      libpulseaudio.dev
       systemd
-    ] + ":" + stdenv.lib.makeSearchPath "lib64" [
+    ] + ":" + stdenv.lib.makeSearchPathOutput "lib" "lib64" [
       stdenv.cc.cc
     ];
+
+  buildInputs = [ makeWrapper gtk3 defaultIconTheme ];
 
   # "strip" after "patchelf" may break binaries.
   # See: https://github.com/NixOS/patchelf/issues/10
@@ -125,13 +133,18 @@ stdenv.mkDerivation {
         firefox firefox-bin plugin-container \
         updater crashreporter webapprt-stub
       do
-        patchelf --interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
-          "$out/usr/lib/firefox-bin-${version}/$executable"
+        if [ -e "$out/usr/lib/firefox-bin-${version}/$executable" ]; then
+          patchelf --interpreter "$(cat $NIX_CC/nix-support/dynamic-linker)" \
+            "$out/usr/lib/firefox-bin-${version}/$executable"
+        fi
       done
 
       find . -executable -type f -exec \
         patchelf --set-rpath "$libPath" \
           "$out/usr/lib/firefox-bin-${version}/{}" \;
+
+      # wrapFirefox expects "$out/lib" instead of "$out/usr/lib"
+      ln -s "$out/usr/lib" "$out/lib"
 
       # Create a desktop item.
       mkdir -p $out/share/applications
@@ -144,7 +157,14 @@ stdenv.mkDerivation {
       GenericName=Web Browser
       Categories=Application;Network;
       EOF
+
+      wrapProgram "$out/bin/firefox" \
+        --argv0 "$out/bin/.firefox-wrapped" \
+        --prefix XDG_DATA_DIRS : "$GSETTINGS_SCHEMAS_PATH:" \
+        --suffix XDG_DATA_DIRS : "$XDG_ICON_DIRS"
     '';
+
+  passthru.ffmpegSupport = true;
 
   meta = with stdenv.lib; {
     description = "Mozilla Firefox, free web browser (binary package)";
@@ -154,5 +174,6 @@ stdenv.mkDerivation {
       url = http://www.mozilla.org/en-US/foundation/trademarks/policy/;
     };
     platforms = platforms.linux;
+    maintainers = with maintainers; [ garbas ];
   };
 }

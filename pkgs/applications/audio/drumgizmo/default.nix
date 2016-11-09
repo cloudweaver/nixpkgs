@@ -3,12 +3,12 @@
 }:
 
 stdenv.mkDerivation rec {
-  version = "0.9.8.1";
+  version = "0.9.11";
   name = "drumgizmo-${version}";
 
   src = fetchurl {
     url = "http://www.drumgizmo.org/releases/${name}/${name}.tar.gz";
-    sha256 = "1plfjhwhaz1mr3kgf5imcp3kjflk6ni9sq39gmxjxzya6gn2r6gg";
+    sha256 = "04hf3nhccwr98n2081rrvfccz50nly6k3gbk9zxccp1522qz5xvf";
   };
 
   configureFlags = [ "--enable-lv2" ];
@@ -21,7 +21,7 @@ stdenv.mkDerivation rec {
   meta = with stdenv.lib; {
     description = "An LV2 sample based drum plugin";
     homepage = http://www.drumgizmo.org;
-    license = licenses.gpl3;
+    license = licenses.lgpl3;
     platforms = platforms.linux;
     maintainers = [ maintainers.goibhniu maintainers.nico202 ];
   };

@@ -1,23 +1,23 @@
 { stdenv, fetchurl, cups }:
 
 let
-  version = "1.6.3";
+  version = "1.6.8";
 in
   stdenv.mkDerivation {
 
     name = "epson-escpr-${version}";
   
     src = fetchurl {
-      url = "https://download3.ebz.epson.net/dsc/f/03/00/04/33/53/0177a44361d3dfeacf7f15ff4a347cef373688da/epson-inkjet-printer-escpr-1.6.3-1lsb3.2.tar.gz";
-      sha256 = "4988479ce7dd5513bfa1cce4a83f82348572d8d69d6aa3b2c6e154a58a04ad86"; 
+      url = "https://download3.ebz.epson.net/dsc/f/03/00/05/10/61/125006df4ffc84861395c1158a02f1f73e6f1753/epson-inkjet-printer-escpr-1.6.8-1lsb3.2.tar.gz";
+      sha256 = "02v8ljzw6xhfkz1x8m50mblcckgfbpa89fc902wcmi2sy8fihgh4";
     }; 
 
     patches = [ ./cups-filter-ppd-dirs.patch ]; 
 
     buildInputs = [ cups ];
 
-    meta = {
-      homepage = https://github.com/artuuge/NixOS-files/;
+    meta = with stdenv.lib; {
+      homepage = "http://download.ebz.epson.net/dsc/search/01/search/";
       description = "ESC/P-R Driver (generic driver)";
       longDescription = ''
         Epson Inkjet Printer Driver (ESC/P-R) for Linux and the
@@ -30,7 +30,9 @@ in
 	    drivers = [ pkgs.epson-escpr ];
 	  };
       '';
-      license = stdenv.lib.licenses.gpl3Plus;
+      license = licenses.gpl3Plus;
+      maintainers = with maintainers; [ artuuge ];
+      platforms = platforms.linux;
     };
 
   }

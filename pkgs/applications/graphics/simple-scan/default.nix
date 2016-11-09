@@ -1,24 +1,34 @@
 { stdenv, fetchurl, cairo, colord, glib, gtk3, gusb, intltool, itstool
-, libusb1, libxml2, pkgconfig, sane-backends, vala, wrapGAppsHook }:
+, libusb1, libxml2, pkgconfig, sane-backends, vala_0_32, wrapGAppsHook
+, gnome3 }:
 
 stdenv.mkDerivation rec {
   name = "simple-scan-${version}";
-  version = "3.19.91";
+  version = "${major_version}.0.1";
+  major_version = "3.22";
 
   src = fetchurl {
-    sha256 = "1c5glf5vxgld41w4jxfqcv17q76qnh43fawpv33hncgh8d283xkf";
-    url = "https://launchpad.net/simple-scan/3.19/${version}/+download/${name}.tar.xz";
+    url = "https://launchpad.net/simple-scan/${major_version}/${version}/+download/${name}.tar.xz";
+    sha256 = "0l1b3llkdlqq0bcjx1cadba67l2zb4zfykdaprpjbjbr6gkbc1f5";
   };
 
-  buildInputs = [ cairo colord glib gusb gtk3 libusb1 libxml2 sane-backends
-    vala ];
+  buildInputs = [ cairo colord glib gnome3.defaultIconTheme gusb gtk3 libusb1 libxml2 sane-backends vala_0_32 ];
   nativeBuildInputs = [ intltool itstool pkgconfig wrapGAppsHook ];
 
   configureFlags = [ "--disable-packagekit" ];
 
+  patchPhase = ''
+    sed -i -e 's#Icon=scanner#Icon=simple-scan#g' ./data/simple-scan.desktop.in
+  '';
+
   preBuild = ''
-    # Clean up stale .c files referencing packagekit headers as of 3.19.91:
+    # Clean up stale .c files referencing packagekit headers as of 3.20.0:
     make clean
+  '';
+
+  postInstall = ''
+    mkdir -p $out/share/icons
+    mv $out/share/simple-scan/icons/* $out/share/icons/
   '';
 
   enableParallelBuilding = true;

@@ -1,12 +1,12 @@
-{ stdenv, lib, fetchurl, tzdata, iana_etc, go_1_4, runCommand
-, perl, which, pkgconfig, patch
+{ stdenv, lib, fetchurl, tzdata, iana_etc, go_bootstrap, runCommand
+, perl, which, pkgconfig, patch, fetchpatch
 , pcre
-, Security, Foundation }:
+, Security, Foundation, bash }:
 
 let
   goBootstrap = runCommand "go-bootstrap" {} ''
     mkdir $out
-    cp -rf ${go_1_4}/* $out/
+    cp -rf ${go_bootstrap}/* $out/
     chmod -R u+w $out
     find $out -name "*.c" -delete
     cp -rf $out/bin/* $out/share/go/bin/
@@ -15,11 +15,11 @@ in
 
 stdenv.mkDerivation rec {
   name = "go-${version}";
-  version = "1.6";
+  version = "1.6.3";
 
   src = fetchurl {
     url = "https://github.com/golang/go/archive/go${version}.tar.gz";
-    sha256 = "04g7w34qamgy9gqpy75xm03s8xbbslv1735iv1a06z8sphpkgs7m";
+    sha256 = "1plakydixx0xrp0z3n8ahnwg66psn31791dh56yl4ry41phq0axm";
   };
 
   # perl is used for testing go vet
@@ -29,9 +29,12 @@ stdenv.mkDerivation rec {
     Security Foundation
   ];
 
+  hardeningDisable = [ "all" ];
+
   # I'm not sure what go wants from its 'src', but the go installation manual
   # describes an installation keeping the src.
   preUnpack = ''
+    topdir=$PWD
     mkdir -p $out/share
     cd $out/share
   '';
@@ -45,6 +48,11 @@ stdenv.mkDerivation rec {
 
     cd go
     patchShebangs ./ # replace /bin/bash
+
+    # This script produces another script at run time,
+    # and thus it is not corrected by patchShebangs.
+    substituteInPlace misc/cgo/testcarchive/test.bash \
+      --replace '#!/usr/bin/env bash' '#!${stdenv.shell}'
 
     # Disabling the 'os/http/net' tests (they want files not available in
     # chroot builds)
@@ -87,14 +95,22 @@ stdenv.mkDerivation rec {
     sed -i '/TestDisasmExtld/areturn' src/cmd/objdump/objdump_test.go
 
     touch $TMPDIR/group $TMPDIR/hosts $TMPDIR/passwd
+
+    sed -i '1 a\exit 0' misc/cgo/errors/test.bash
+
+    mkdir $topdir/dirtyhacks
+    cat <<EOF > $topdir/dirtyhacks/clang
+    #!${bash}/bin/bash
+    $(type -P clang) "\$@" 2> >(sed '/ld: warning:.*ignoring unexpected dylib file/ d' 1>&2)
+    exit $?
+    EOF
+    chmod +x $topdir/dirtyhacks/clang
+    PATH=$topdir/dirtyhacks:$PATH
   '';
 
   patches = [
     ./remove-tools-1.5.patch
-  ]
-  # -ldflags=-s is required to compile on Darwin, see
-  # https://github.com/golang/go/issues/11994
-  ++ stdenv.lib.optional stdenv.isDarwin ./strip.patch;
+  ];
 
   GOOS = if stdenv.isDarwin then "darwin" else "linux";
   GOARCH = if stdenv.isDarwin then "amd64"
@@ -127,7 +143,7 @@ stdenv.mkDerivation rec {
 
   setupHook = ./setup-hook.sh;
 
-  disallowedReferences = [ go_1_4 ];
+  disallowedReferences = [ go_bootstrap ];
 
   meta = with stdenv.lib; {
     branch = "1.6";

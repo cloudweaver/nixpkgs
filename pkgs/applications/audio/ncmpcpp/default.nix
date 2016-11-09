@@ -15,11 +15,11 @@ assert taglibSupport -> (taglib != null);
 with stdenv.lib;
 stdenv.mkDerivation rec {
   name = "ncmpcpp-${version}";
-  version = "0.7.2";
+  version = "0.7.5";
 
   src = fetchurl {
     url = "http://ncmpcpp.rybczak.net/stable/${name}.tar.bz2";
-    sha256 = "0fq9nk796cp7gs0gwrabb6wp7f5h7pph10hrkrik1wf4k3mzb4k3";
+    sha256 = "0zg084m06y7dd8ccy6aq9hx8q7qi2s5kl0br5139hrmk40q68kvy";
   };
 
   configureFlags = [ "BOOST_LIB_SUFFIX=" ]
@@ -42,6 +42,6 @@ stdenv.mkDerivation rec {
     homepage    = http://ncmpcpp.rybczak.net/;
     license     = licenses.gpl2Plus;
     maintainers = with maintainers; [ lovek323 mornfall koral ];
-    platforms   = platforms.all;
+    platforms   = platforms.linux;
   };
 }

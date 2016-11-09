@@ -1,23 +1,33 @@
-{ stdenv, fetchFromGitHub, cmake, libpfm, zlib, python, pkgconfig, pythonPackages, which, procps }:
+{ stdenv, fetchFromGitHub, cmake, libpfm, zlib, pkgconfig, python2Packages, which, procps, gdb }:
 
 stdenv.mkDerivation rec {
-  version = "4.0.3";
+  version = "4.3.0";
   name = "rr-${version}";
 
   src = fetchFromGitHub {
     owner = "mozilla";
     repo = "rr";
     rev = version;
-    sha256 = "0k12r1hzkn5286kz5cg4mvii92m0prs58przchr495r9hfjcy276";
+    sha256 = "0hl59g6252zi1j9zng5x5gqlmdwa4gz7mbvz8h3b7z4gnn2q5l6c";
   };
 
-  patchPhase = ''
+  postPatch = ''
     substituteInPlace src/Command.cc --replace '_BSD_SOURCE' '_DEFAULT_SOURCE'
+    sed '7i#include <math.h>' -i src/Scheduler.cc
     patchShebangs .
   '';
 
-  buildInputs = [ cmake libpfm zlib python pkgconfig pythonPackages.pexpect which procps ];
-  cmakeFlags = "-DCMAKE_C_FLAGS_RELEASE:STRING= -DCMAKE_CXX_FLAGS_RELEASE:STRING=";
+  buildInputs = [ cmake libpfm zlib python2Packages.python pkgconfig python2Packages.pexpect which procps gdb ];
+  cmakeFlags = [
+    "-DCMAKE_C_FLAGS_RELEASE:STRING="
+    "-DCMAKE_CXX_FLAGS_RELEASE:STRING="
+    "-Ddisable32bit=ON"
+  ];
+
+  # we turn on additional warnings due to hardening
+  NIX_CFLAGS_COMPILE = "-Wno-error";
+
+  hardeningDisable = [ "fortify" ];
 
   enableParallelBuilding = true;
 

@@ -1,15 +1,17 @@
 { stdenv, fetchFromGitHub, autoreconfHook, bison, flex, pkgconfig }:
 
-let version = "3.2.26"; in
+let version = "3.2.28"; in
 stdenv.mkDerivation {
   name = "libnl-${version}";
 
   src = fetchFromGitHub {
-    sha256 = "1cbqdhirn6hxmv8xkm8xp3n6ayyxw7sbi15fym167rdz0h9rkhmm";
-    rev = "libnl3_2_26";
+    sha256 = "02cm57z4h7rhjlxza07zhk02924acfz6m5gbmm5lbkkp6qh81328";
+    rev = "libnl3_2_28";
     repo = "libnl";
     owner = "thom311";
   };
+
+  outputs = [ "bin" "dev" "out" "man" ];
 
   nativeBuildInputs = [ autoreconfHook bison flex pkgconfig ];
 

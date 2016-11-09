@@ -1,4 +1,4 @@
-{ stdenv, fetchFromGitHub, autoreconfHook, pkgconfig, python, perl, yacc, flex
+{ stdenv, fetchFromGitHub, autoreconfHook, pkgconfig, python2, perl, yacc, flex
 , texinfo, perlPackages
 , openldap, libcap_ng, sqlite, openssl, db, libedit, pam
 
@@ -20,7 +20,7 @@ stdenv.mkDerivation rec {
     sha256 = "1r60i4v6y5lpll0l2qpn0ycp6q6f1xjg7k1csi547zls8k96yk9s";
   };
 
-  nativeBuildInputs = [ autoreconfHook pkgconfig python perl yacc flex ]
+  nativeBuildInputs = [ autoreconfHook pkgconfig python2 perl yacc flex ]
     ++ (with perlPackages; [ JSON ])
     ++ optional (!libOnly) texinfo;
   buildInputs = optionals (!stdenv.isFreeBSD) [ libcap_ng db ]
@@ -32,13 +32,13 @@ stdenv.mkDerivation rec {
     "--sysconfdir=/etc"
     "--localstatedir=/var"
     "--enable-hdb-openldap-module"
-    "--with-sqlite3=${sqlite}"
+    "--with-sqlite3=${sqlite.dev}"
     "--with-libedit=${libedit}"
-    "--with-openssl=${openssl}"
+    "--with-openssl=${openssl.dev}"
     "--without-x"
     "--with-berkeley-db=${db}"
   ] ++ optionals (!libOnly) [
-    "--with-openldap=${openldap}"
+    "--with-openldap=${openldap.dev}"
   ] ++ optionals (!stdenv.isFreeBSD) [
     "--with-capng"
   ];

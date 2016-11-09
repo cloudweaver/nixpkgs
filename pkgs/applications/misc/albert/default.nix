@@ -1,26 +1,31 @@
-{ stdenv, fetchFromGitHub, qtbase, qtx11extras, makeQtWrapper, muparser, cmake }:
+{ stdenv, fetchFromGitHub, qtbase, qtsvg, qtx11extras, makeQtWrapper, muparser, cmake }:
 
 stdenv.mkDerivation rec {
   name    = "albert-${version}";
-  version = "0.8.0";
+  version = "0.8.11";
 
   src = fetchFromGitHub {
     owner  = "manuelschneid3r";
     repo   = "albert";
     rev    = "v${version}";
-    sha256 = "0lzj1gbcc5sp2x1c0d3s21y55kcnnn4dmy8d205mrgnyavjrak7n";
+    sha256 = "12ag30l3dd05hg0d08ax4c8dvp24lgd677szkq445xzvvhggxr37";
   };
 
-  buildInputs = [ cmake qtbase qtx11extras muparser makeQtWrapper ];
+  nativeBuildInputs = [ cmake makeQtWrapper ];
+
+  buildInputs = [ qtbase qtsvg qtx11extras muparser ];
+
+  enableParallelBuilding = true;
 
   fixupPhase = ''
     wrapQtProgram $out/bin/albert
   '';
 
-  meta = {
+  meta = with stdenv.lib; {
     homepage    = https://github.com/manuelSchneid3r/albert;
     description = "Desktop agnostic launcher";
-    license     = stdenv.lib.licenses.gpl3Plus;
-    maintainers = [ stdenv.lib.maintainers.ericsagnes ];
+    license     = licenses.gpl3Plus;
+    maintainers = with maintainers; [ ericsagnes ];
+    platforms   = platforms.linux;
   };
 }

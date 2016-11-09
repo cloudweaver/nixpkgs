@@ -1,4 +1,4 @@
-{ stdenv, fetchurl }:
+{ stdenv, fetchurl, fetchpatch, pkgs }:
 
 let
 
@@ -18,16 +18,22 @@ let
       };
     };
 
-  grsecPatch = { grversion ? "3.1", kversion, revision, branch, sha256 }:
-    { name = "grsecurity-${grversion}-${kversion}";
-      inherit grversion kversion revision;
-      patch = fetchurl {
-        url = "https://github.com/slashbeast/grsecurity-scrape/blob/master/${branch}/grsecurity-${grversion}-${kversion}-${revision}.patch?raw=true";
-        inherit sha256;
-      };
-      features.grsecurity = true;
+  grsecPatch = { grbranch ? "test", grver ? "3.1", kver, grrev, sha256 }: rec {
+    name = "grsecurity-${grver}-${kver}-${grrev}";
+
+    # Pass these along to allow the caller to determine compatibility
+    inherit grver kver grrev;
+
+    patch = fetchurl {
+      # When updating versions/hashes, ALWAYS use the official version; we use
+      # this mirror only because upstream removes sources files immediately upon
+      # releasing a new version ...
+      url = "https://raw.githubusercontent.com/slashbeast/grsecurity-scrape/master/${grbranch}/${name}.patch";
+      inherit sha256;
     };
 
+    features.grsecurity = true;
+  };
 in
 
 rec {
@@ -58,14 +64,14 @@ rec {
       patch = ./mips-ext3-n32.patch;
     };
 
-  ubuntu_fan =
-    { name = "ubuntu-fan";
-      patch = ./ubuntu-fan-3.patch;
+  modinst_arg_list_too_long =
+    { name = "modinst-arglist-too-long";
+      patch = ./modinst-arg-list-too-long.patch;
     };
 
-  ubuntu_fan_4 =
+  ubuntu_fan_4_4 =
     { name = "ubuntu-fan";
-      patch = ./ubuntu-fan-4.patch;
+      patch = ./ubuntu-fan-4.4.patch;
     };
 
   ubuntu_unprivileged_overlayfs =
@@ -79,23 +85,18 @@ rec {
     sha256 = "00b1rqgd4yr206dxp4mcymr56ymbjcjfa4m82pxw73khj032qw3j";
   };
 
-  grsecurity_stable = grsecPatch
-    { kversion  = "3.14.51";
-      revision  = "201508181951";
-      branch    = "stable";
-      sha256    = "1sp1gwa7ahzflq7ayb51bg52abrn5zx1hb3pff3axpjqq7vfai6f";
+  grsecurity_testing = grsecPatch
+    { kver   = "4.7.10";
+      grrev  = "201611011946";
+      sha256 = "0nva1007r4shlcxzflbxvd88yzvb98si2kjlgnhdqphyz1c0qhql";
     };
 
-  grsecurity_unstable = grsecPatch
-    { kversion  = "4.3.4";
-      revision  = "201601231215";
-      branch    = "test";
-      sha256    = "1dacld4zlp8mk6ykc0f1v5crppvq3znbdw9rwfrf6qi90984x0mr";
-    };
-
-  grsec_fix_path =
-    { name = "grsec-fix-path";
-      patch = ./grsec-path.patch;
+  # This patch relaxes grsec constraints on the location of usermode helpers,
+  # e.g., modprobe, to allow calling into the Nix store.
+  grsecurity_nixos_kmod =
+    {
+      name  = "grsecurity-nixos-kmod";
+      patch = ./grsecurity-nixos-kmod.patch;
     };
 
   crc_regression =
@@ -128,4 +129,23 @@ rec {
     { name = "mfd_fix_dependency";
       patch = ./chromiumos-patches/mfd-fix-dependency.patch;
     };
+
+  hiddev_CVE_2016_5829 =
+    { name = "hiddev_CVE_2016_5829";
+      patch = fetchpatch {
+        url = "https://sources.debian.net/data/main/l/linux/4.6.3-1/debian/patches/bugfix/all/HID-hiddev-validate-num_values-for-HIDIOCGUSAGES-HID.patch";
+        sha256 = "14rm1qr87p7a5prz8g5fwbpxzdp3ighj095x8rvhm8csm20wspyy";
+      };
+    };
+
+  cpu-cgroup-v2 = import ./cpu-cgroup-v2-patches;
+
+  lguest_entry-linkage =
+    { name = "lguest-asmlinkage.patch";
+      patch = fetchpatch {
+        url = "https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git"
+            + "/patch/drivers/lguest/x86/core.c?id=cdd77e87eae52";
+        sha256 = "04xlx6al10cw039av6jkby7gx64zayj8m1k9iza40sw0fydcfqhc";
+    };
+  };
 }

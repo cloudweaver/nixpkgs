@@ -71,6 +71,7 @@ let
       # interfaces
     ${forEach "  ip-address: " cfg.interfaces}
 
+      ip-freebind:         ${yesOrNo  cfg.ipFreebind}
       hide-version:        ${yesOrNo  cfg.hideVersion}
       identity:            "${cfg.identity}"
       ip-transparent:      ${yesOrNo  cfg.ipTransparent}
@@ -84,7 +85,7 @@ let
       reuseport:           ${yesOrNo  cfg.reuseport}
       round-robin:         ${yesOrNo  cfg.roundRobin}
       server-count:        ${toString cfg.serverCount}
-      ${if cfg.statistics == null then "" else "statistics:          ${toString cfg.statistics}"}
+      ${maybeToString "statistics: " cfg.statistics}
       tcp-count:           ${toString cfg.tcpCount}
       tcp-query-count:     ${toString cfg.tcpQueryCount}
       tcp-timeout:         ${toString cfg.tcpTimeout}
@@ -117,7 +118,8 @@ let
   '';
 
   yesOrNo = b: if b then "yes" else "no";
-  maybeString = pre: s: if s == null then "" else ''${pre} "${s}"'';
+  maybeString = prefix: x: if x == null then "" else ''${prefix} "${s}"'';
+  maybeToString = prefix: x: if x == null then "" else ''${prefix} ${toString s}'';
   forEach = pre: l: concatMapStrings (x: pre + x + "\n") l;
 
 
@@ -145,6 +147,11 @@ let
       ${maybeString "outgoing-interface: " zone.outgoingInterface}
     ${forEach     "  rrl-whitelist: "      zone.rrlWhitelist}
       ${maybeString "zonestats: "          zone.zoneStats}
+
+      ${maybeToString "max-refresh-time: " zone.maxRefreshSecs}
+      ${maybeToString "min-refresh-time: " zone.minRefreshSecs}
+      ${maybeToString "max-retry-time:   " zone.maxRetrySecs}
+      ${maybeToString "min-retry-time:   " zone.minRetrySecs}
 
       allow-axfr-fallback: ${yesOrNo       zone.allowAXFRFallback}
     ${forEach     "  allow-notify: "       zone.allowNotify}
@@ -240,6 +247,44 @@ let
           Use imports or pkgs.lib.readFile if you don't want this data in your config file.
         '';
       };
+
+      maxRefreshSecs = mkOption {
+        type = types.nullOr types.int;
+        default = null;
+        description = ''
+          Limit refresh time for secondary zones. This is the timer which
+          checks to see if the zone has to be refetched when it expires.
+          Normally the value from the SOA record is used, but this  option
+          restricts that value.
+        '';
+      };
+
+      minRefreshSecs = mkOption {
+        type = types.nullOr types.int;
+        default = null;
+        description = ''
+          Limit refresh time for secondary zones.
+        '';
+      };
+
+      maxRetrySecs = mkOption {
+        type = types.nullOr types.int;
+        default = null;
+        description = ''
+          Limit retry time for secondary zones. This is the timeout after
+          a failed fetch attempt for the zone. Normally the value from
+          the SOA record is used, but this option restricts that value.
+        '';
+      };
+
+      minRetrySecs = mkOption {
+        type = types.nullOr types.int;
+        default = null;
+        description = ''
+          Limit retry time for secondary zones.
+        '';
+      };
+
 
       notify = mkOption {
         type = types.listOf types.str;
@@ -346,7 +391,7 @@ in
       type = types.bool;
       default = true;
       description = ''
-        Wheter NSD should answer VERSION.BIND and VERSION.SERVER CHAOS class queries.
+        Whether NSD should answer VERSION.BIND and VERSION.SERVER CHAOS class queries.
       '';
     };
 
@@ -366,6 +411,15 @@ in
       '';
     };
 
+    ipFreebind = mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        Whether to bind to nonlocal addresses and interfaces that are down.
+        Similar to ip-transparent.
+      '';
+    };
+
     ipTransparent = mkOption {
       type = types.bool;
       default = false;
@@ -378,7 +432,7 @@ in
       type = types.bool;
       default = true;
       description = ''
-        Wheter to listen on IPv4 connections.
+        Whether to listen on IPv4 connections.
       '';
     };
 
@@ -394,7 +448,7 @@ in
       type = types.bool;
       default = true;
       description = ''
-        Wheter to listen on IPv6 connections.
+        Whether to listen on IPv6 connections.
       '';
     };
 
@@ -434,7 +488,7 @@ in
       type = types.bool;
       default = pkgs.stdenv.isLinux;
       description = ''
-        Wheter to enable SO_REUSEPORT on all used sockets. This lets multiple
+        Whether to enable SO_REUSEPORT on all used sockets. This lets multiple
         processes bind to the same port. This speeds up operation especially
         if the server count is greater than one and makes fast restarts less
         prone to fail
@@ -445,7 +499,7 @@ in
       type = types.bool;
       default = false;
       description = ''
-        Wheter if this server will be a root server (a DNS root server, you
+        Whether this server will be a root server (a DNS root server, you
         usually don't want that).
       '';
     };
@@ -524,7 +578,7 @@ in
       type = types.bool;
       default = true;
       description = ''
-        Wheter to check mtime of all zone files on start and sighup.
+        Whether to check mtime of all zone files on start and sighup.
       '';
     };
 

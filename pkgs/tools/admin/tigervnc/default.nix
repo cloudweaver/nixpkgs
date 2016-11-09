@@ -1,7 +1,7 @@
 { stdenv, fetchgit, xorg
 , autoconf, automake, cvs, libtool, nasm, pixman, xkeyboard_config
 , fontDirectories, libgcrypt, gnutls, pam, flex, bison, gettext
-, cmake, libjpeg_turbo, fltk
+, cmake, libjpeg_turbo, fltk, nettle, libiconv, libtasn1
 }:
 
 with stdenv.lib;
@@ -20,7 +20,6 @@ stdenv.mkDerivation rec {
 
   patchPhase = ''
     sed -i -e 's,$(includedir)/pixman-1,${if stdenv ? cross then pixman.crossDrv else pixman}/include/pixman-1,' unix/xserver/hw/vnc/Makefile.am
-    sed -i -e '/^$pidFile/a$ENV{XKB_BINDIR}="${if stdenv ? cross then xorg.xkbcomp.crossDrv else xorg.xkbcomp}/bin";' unix/vncserver
     sed -i -e '/^\$cmd \.= " -pn";/a$cmd .= " -xkbdir ${if stdenv ? cross then xkeyboard_config.crossDrv else xkeyboard_config}/etc/X11/xkb";' unix/vncserver
     fontPath=
     for i in $fontDirectories; do
@@ -69,12 +68,12 @@ stdenv.mkDerivation rec {
   buildInputs =
     [ xorg.libX11 xorg.libXext gettext xorg.libICE xorg.libXtst xorg.libXi xorg.libSM xorg.libXft
       nasm libgcrypt gnutls pam pixman libjpeg_turbo fltk xorg.xineramaproto
-      xorg.libXinerama xorg.libXcursor
+      xorg.libXinerama xorg.libXcursor nettle libiconv libtasn1
     ];
 
   nativeBuildInputs =
     [ autoconf automake cvs xorg.utilmacros xorg.fontutil libtool flex bison
-      cmake
+      cmake gettext
     ]
       ++ xorg.xorgserver.nativeBuildInputs;
 

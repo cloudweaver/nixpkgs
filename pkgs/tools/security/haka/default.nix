@@ -13,6 +13,8 @@ stdenv.mkDerivation rec {
     sha1 = "87625ed32841cc0b3aa92aa49397ce71ce434bc2";
   };
 
+  NIX_CFLAGS_COMPILE = "-Wno-error";
+
   preConfigure = ''
     sed -i 's,/etc,'$out'/etc,' src/haka/haka.c
     sed -i 's,/etc,'$out'/etc,' src/haka/CMakeLists.txt
@@ -25,7 +27,7 @@ stdenv.mkDerivation rec {
   enableParallelBuilding = true;
 
   meta = {
-    dscription = "A collection of tools that allows capturing TCP/IP packets and filtering them based on Lua policy files";
+    description = "A collection of tools that allows capturing TCP/IP packets and filtering them based on Lua policy files";
     homepage = http://www.haka-security.org/;
     license = stdenv.lib.licenses.mpl20;
     maintaineres = [ stdenv.lib.maintainers.tvestelind ];

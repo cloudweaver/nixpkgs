@@ -4,7 +4,7 @@ with lib;
 
 let
   cfg = config.services.dovecot2;
-  dovecotPkg = cfg.package;
+  dovecotPkg = pkgs.dovecot;
 
   baseDir = "/run/dovecot2";
   stateDir = "/var/lib/dovecot";
@@ -63,8 +63,10 @@ let
     cfg.extraConfig
   ];
 
-  modulesDir = pkgs.symlinkJoin "dovecot-modules"
-    (map (pkg: "${pkg}/lib/dovecot") ([ dovecotPkg ] ++ map (module: module.override { dovecot = dovecotPkg; }) cfg.modules));
+  modulesDir = pkgs.symlinkJoin {
+    name = "dovecot-modules";
+    paths = map (pkg: "${pkg}/lib/dovecot") ([ dovecotPkg ] ++ map (module: module.override { dovecot = dovecotPkg; }) cfg.modules);
+  };
 
 in
 {
@@ -96,13 +98,6 @@ in
       description = "Additional listeners to start when Dovecot is enabled.";
     };
 
-    package = mkOption {
-      type = types.package;
-      default = pkgs.dovecot22;
-      defaultText = "pkgs.dovecot22";
-      description = "Dovecot package to use.";
-    };
-
     user = mkOption {
       type = types.str;
       default = "dovecot2";
@@ -116,7 +111,7 @@ in
     };
 
     extraConfig = mkOption {
-      type = types.str;
+      type = types.lines;
       default = "";
       example = "mail_debug = yes";
       description = "Additional entries to put verbatim into Dovecot's config file.";
@@ -157,8 +152,7 @@ in
       description = ''
         Symlinks the contents of lib/dovecot of every given package into
         /etc/dovecot/modules. This will make the given modules available
-        if a dovecot package with the module_dir patch applied (like
-        pkgs.dovecot22, the default) is being used.
+        if a dovecot package with the module_dir patch applied is being used.
       '';
     };
 
@@ -254,7 +248,7 @@ in
         ${concatStringsSep "\n" (mapAttrsToList (to: from: ''
           if [ -d '${from}' ]; then
             mkdir '${stateDir}/sieve/${to}'
-            cp ${from}/*.sieve '${stateDir}/sieve/${to}'
+            cp "${from}/"*.sieve '${stateDir}/sieve/${to}'
           else
             cp '${from}' '${stateDir}/sieve/${to}'
           fi
@@ -276,6 +270,9 @@ in
       }
       { assertion = cfg.showPAMFailure -> cfg.enablePAM;
         message = "dovecot is configured with showPAMFailure while enablePAM is disabled";
+      }
+      { assertion = (cfg.sieveScripts != {}) -> ((cfg.mailUser != null) && (cfg.mailGroup != null));
+        message = "dovecot requires mailUser and mailGroup to be set when sieveScripts is set";
       }
     ];
 

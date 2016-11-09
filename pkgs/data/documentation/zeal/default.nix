@@ -1,28 +1,24 @@
 { stdenv, fetchFromGitHub, libarchive, pkgconfig, qtbase
-, qtimageformats, qtwebkit, qtx11extras, xorg }:
+, qtimageformats, qtwebkit, qtx11extras, xcbutilkeysyms, qmakeHook }:
 
 stdenv.mkDerivation rec {
-  version = "0.2.1";
+  version = "0.3.1";
   name = "zeal-${version}";
 
   src = fetchFromGitHub {
     owner = "zealdocs";
     repo = "zeal";
     rev = "v${version}";
-    sha256 = "1j1nfvkwkb2xdh289q5gdb526miwwqmqjyd6fz9qm5dg467wmwa3";
+    sha256 = "14ld7zm15677jdlasnfa6c42kiswd4d6yg1db50xbk2yflzzwqqa";
   };
 
   buildInputs = [
-    xorg.xcbutilkeysyms pkgconfig qtbase qtimageformats qtwebkit qtx11extras libarchive
+    xcbutilkeysyms pkgconfig qtbase qtimageformats qtwebkit qtx11extras libarchive qmakeHook
   ];
 
-  configurePhase = ''
-    qmake PREFIX=/
-  '';
+  qmakeFlags = [ "PREFIX=/" ];
 
-  installPhase = ''
-    make INSTALL_ROOT=$out install
-  '';
+  installFlags = [ "INSTALL_ROOT=$(out)" ];
 
   enableParallelBuilding = true;
 
@@ -38,4 +34,3 @@ stdenv.mkDerivation rec {
     maintainers = with stdenv.lib.maintainers; [ skeidel ];
   };
 }
-

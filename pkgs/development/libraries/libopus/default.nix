@@ -1,15 +1,17 @@
 { stdenv, fetchurl, fixedPoint ? false, withCustomModes ? true }:
 
 let
-  version = "1.1";
+  version = "1.1.3";
 in
 stdenv.mkDerivation rec {
   name = "libopus-${version}";
 
   src = fetchurl {
     url = "http://downloads.xiph.org/releases/opus/opus-${version}.tar.gz";
-    sha256 = "158xprn2086arvdib3vbbygz7z6jqkw2nci7nlywzzwallap0wmr";
+    sha256 = "0cxnd7pjxbgh6l3cbzsw29phpr5cq28fikfhjlp1hc3y5s0gxdjq";
   };
+
+  outputs = [ "out" "dev" ];
 
   configureFlags = stdenv.lib.optional fixedPoint "--enable-fixed-point"
                 ++ stdenv.lib.optional withCustomModes "--enable-custom-modes";

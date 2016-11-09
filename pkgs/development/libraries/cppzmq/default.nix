@@ -1,13 +1,14 @@
 { stdenv, fetchFromGitHub }:
 
 stdenv.mkDerivation rec {
-  name = "cppzmq-20151203";
+  name = "cppzmq-${version}";
+  version = "2016-07-18";
 
   src = fetchFromGitHub {
     owner = "zeromq";
     repo = "cppzmq";
-    rev = "7f7c83411d83eafe57ae6ffc2972ad9455ac258e";
-    sha256 = "1h6fl7mgkv98gz0csbp525a4bp1w9nwm059gwmmv1wqc1l741pv7";
+    rev = "92d2af6def80a01b76d5e73f073c439ad00ab757";
+    sha256 = "0lnwh314hh5ifad2sa2nz1g1ld1jc4vplm7clyvx304sjjvbvl27";
   };
 
   installPhase = ''

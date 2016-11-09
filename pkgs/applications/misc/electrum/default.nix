@@ -1,19 +1,20 @@
-{ stdenv, fetchurl, buildPythonApplication, pythonPackages, slowaes }:
+{ stdenv, fetchurl, pythonPackages }:
 
-buildPythonApplication rec {
+pythonPackages.buildPythonApplication rec {
   name = "electrum-${version}";
-  version = "2.5.4";
+  version = "2.7.11";
 
   src = fetchurl {
     url = "https://download.electrum.org/${version}/Electrum-${version}.tar.gz";
-    sha256 = "18saa2rg07vfp9scp3i8s0wi2pqw9s8l8b44gq43zzl41120zc60";
+    sha256 = "0qy2ynyw57jgi7fw3xzsyy608yk4bhsda7qfw0j26zqinv52mrsb";
   };
 
   propagatedBuildInputs = with pythonPackages; [
     dns
     ecdsa
+    jsonrpclib
     pbkdf2
-    protobuf
+    protobuf3_0
     pyasn1
     pyasn1-modules
     pycrypto
@@ -32,22 +33,26 @@ buildPythonApplication rec {
     # amodem
   ];
 
-  preInstall = ''
-    mkdir -p $out/share
-    sed -i 's@usr_share = .*@usr_share = os.getenv("out")+"/share"@' setup.py
+  preBuild = ''
+    sed -i 's,usr_share = .*,usr_share = "'$out'/share",g' setup.py
     pyrcc4 icons.qrc -o gui/qt/icons_rc.py
   '';
 
+  doInstallCheck = true;
+  installCheckPhase = ''
+    $out/bin/electrum help >/dev/null
+  '';
+
   meta = with stdenv.lib; {
-    description = "Bitcoin thin-client";
+    description = "A lightweight Bitcoin wallet";
     longDescription = ''
       An easy-to-use Bitcoin client featuring wallets generated from
       mnemonic seeds (in addition to other, more advanced, wallet options)
       and the ability to perform transactions without downloading a copy
       of the blockchain.
     '';
-    homepage = https://electrum.org;
-    license = licenses.gpl3;
+    homepage = https://electrum.org/;
+    license = licenses.mit;
     maintainers = with maintainers; [ ehmry joachifm np ];
   };
 }

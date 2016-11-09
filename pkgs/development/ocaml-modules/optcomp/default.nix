@@ -1,4 +1,4 @@
-{stdenv, fetchurl, ocaml, findlib, camlp4}:
+{ stdenv, fetchurl, ocaml, findlib, ocamlbuild, camlp4 }:
 
 stdenv.mkDerivation {
   name = "ocaml-optcomp-1.6";
@@ -9,14 +9,14 @@ stdenv.mkDerivation {
   
   createFindlibDestdir = true;
 
-  buildInputs = [ocaml findlib camlp4];
+  buildInputs = [ ocaml findlib ocamlbuild camlp4 ];
 
 
   meta =  {
     homepage = https://github.com/diml/optcomp;
     description = "Optional compilation for OCaml with cpp-like directives";
     license = stdenv.lib.licenses.bsd3;
-    platforms = ocaml.meta.platforms;
+    platforms = ocaml.meta.platforms or [];
     maintainers = [
       stdenv.lib.maintainers.gal_bolle
     ];

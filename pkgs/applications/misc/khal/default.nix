@@ -1,15 +1,20 @@
-{ stdenv, fetchurl, pkgs, pythonPackages }:
+{ stdenv, fetchurl, pkgs, python3Packages }:
 
-pythonPackages.buildPythonApplication rec {
-  version = "0.7.0";
+with python3Packages;
+
+buildPythonApplication rec {
+  # Reenable tests for 0.9.0, they are broken at the moment: #15981
+  version = "0.8.4";
   name = "khal-${version}";
 
   src = fetchurl {
-    url = "https://pypi.python.org/packages/source/k/khal/khal-${version}.tar.gz";
-    sha256 = "00llxj7cv31mjsx0j6zxmyi9s1q20yvfkn025xcy8cv1ylfwic66";
+    url = "mirror://pypi/k/khal/khal-${version}.tar.gz";
+    sha256 = "03vy4dp9n43w51mwqjjy08dr5nj7wxqnb085visz3j43vzm42p1f";
   };
 
-  propagatedBuildInputs = with pythonPackages; [
+  LC_ALL = "en_US.UTF-8";
+
+  propagatedBuildInputs = [
     atomicwrites
     click
     configobj
@@ -22,9 +27,14 @@ pythonPackages.buildPythonApplication rec {
     requests_toolbelt
     tzlocal
     urwid
-    python.modules.sqlite3
     pkginfo
+    freezegun
   ];
+  buildInputs = [ setuptools_scm pytest pkgs.glibcLocales ];
+
+  checkPhase = ''
+    # py.test
+  '';
 
   meta = with stdenv.lib; {
     homepage = http://lostpackets.de/khal/;

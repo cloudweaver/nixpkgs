@@ -1,4 +1,7 @@
-{ stdenv, fetchurl, ghostscript, perl, groff }:
+{ stdenv, fetchurl, perl, groff
+, ghostscript #for postscript and html output
+, psutils, netpbm #for html output
+}:
 
 stdenv.mkDerivation rec {
   name = "groff-1.22.3";
@@ -12,7 +15,21 @@ stdenv.mkDerivation rec {
 
   enableParallelBuilding = false;
 
-  buildInputs = [ ghostscript ];
+  postPatch = stdenv.lib.optionalString (psutils != null) ''
+    substituteInPlace src/preproc/html/pre-html.cpp \
+      --replace "psselect" "${psutils}/bin/psselect"
+  '' + stdenv.lib.optionalString (netpbm != null) ''
+    substituteInPlace src/preproc/html/pre-html.cpp \
+      --replace "pnmcut" "${netpbm}/bin/pnmcut" \
+      --replace "pnmcrop" "${netpbm}/bin/pnmcrop" \
+      --replace "pnmtopng" "${netpbm}/bin/pnmtopng"
+    substituteInPlace tmac/www.tmac \
+      --replace "pnmcrop" "${netpbm}/bin/pnmcrop" \
+      --replace "pngtopnm" "${netpbm}/bin/pngtopnm" \
+      --replace "@PNMTOPS_NOSETPAGE@" "${netpbm}/bin/pnmtops -nosetpage"
+  '';
+
+  buildInputs = [ ghostscript psutils netpbm ];
   nativeBuildInputs = [ perl ];
 
   # Builds running without a chroot environment may detect the presence
@@ -20,7 +37,11 @@ stdenv.mkDerivation rec {
   # package. To avoid this issue, X11 support is explicitly disabled.
   # Note: If we ever want to *enable* X11 support, then we'll probably
   # have to pass "--with-appresdir", too.
-  configureFlags = "--without-x";
+  configureFlags = [
+    "--without-x"
+  ] ++ stdenv.lib.optionals (ghostscript != null) [
+    "--with-gs=${ghostscript}/bin/gs"
+  ];
 
   doCheck = true;
 
@@ -32,13 +53,12 @@ stdenv.mkDerivation rec {
     '';
   };
 
+  # Remove example output with (random?) colors and creation date
+  # to avoid non-determinism in the output.
   postInstall = ''
-      # Remove example output with (random?) colors to 
-      # avoid non-determinism in the output
-      rm $out/share/doc/${name}/examples/hdtbl/*color*ps
-      # Remove creation date
-      find $out/share/doc/${name} -type f -print0 | xargs -0 sed -i -e 's/%%CreationDate: .*//'
-    '';
+    rm $doc/share/doc/groff/examples/hdtbl/*color*ps
+    find $doc/share/doc/groff/ -type f -print0 | xargs -0 sed -i -e 's/%%CreationDate: .*//'
+  '';
 
   meta = with stdenv.lib; {
     homepage = http://www.gnu.org/software/groff/;

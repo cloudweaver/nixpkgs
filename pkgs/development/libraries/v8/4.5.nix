@@ -83,6 +83,7 @@ stdenv.mkDerivation rec {
     sed -i 's,#!/usr/bin/env python,#!${python}/bin/python,' build/gyp_v8
     sed -i 's,/bin/echo,${coreutils}/bin/echo,' build/standalone.gypi
     sed -i '/CR_CLANG_REVISION/ d' build/standalone.gypi
+    sed -i 's/-Wno-format-pedantic//g' build/standalone.gypi
   '';
 
   configurePhase = ''
@@ -104,6 +105,8 @@ stdenv.mkDerivation rec {
   nativeBuildInputs = [ which ];
   buildInputs = [ readline python icu patchelf ];
 
+  NIX_CFLAGS_COMPILE = "-Wno-error=strict-overflow";
+
   buildFlags = [
     "LINK=g++"
     "-C out"
@@ -122,8 +125,8 @@ stdenv.mkDerivation rec {
     install -vD out/Release/mksnapshot "$out/bin/mksnapshot"
     ${if stdenv.isDarwin then ''
     install -vD out/Release/lib.target/libv8.dylib "$out/lib/libv8.dylib"
-    install_name_tool -change /usr/local/lib/libv8.dylib $out/lib/libv8.dylib -change /usr/lib/libgcc_s.1.dylib ${stdenv.cc.cc}/lib/libgcc_s.1.dylib $out/bin/d8
-    install_name_tool -id $out/lib/libv8.dylib -change /usr/lib/libgcc_s.1.dylib ${stdenv.cc.cc}/lib/libgcc_s.1.dylib $out/lib/libv8.dylib
+    install_name_tool -change /usr/local/lib/libv8.dylib $out/lib/libv8.dylib -change /usr/lib/libgcc_s.1.dylib ${stdenv.cc.cc.lib}/lib/libgcc_s.1.dylib $out/bin/d8
+    install_name_tool -id $out/lib/libv8.dylib -change /usr/lib/libgcc_s.1.dylib ${stdenv.cc.cc.lib}/lib/libgcc_s.1.dylib $out/lib/libv8.dylib
     '' else ''
     install -vD out/Release/lib.target/libv8.so "$out/lib/libv8.so"
     ''}
@@ -135,7 +138,7 @@ stdenv.mkDerivation rec {
 
   meta = with lib; {
     description = "Google's open source JavaScript engine";
-    maintainers = with maintainers; [ cstrahan ];
+    maintainers = with maintainers; [ cstrahan proglodyte ];
     platforms = platforms.linux;
     license = licenses.bsd3;
   };

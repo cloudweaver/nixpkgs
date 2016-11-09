@@ -31,7 +31,8 @@ in rec {
     inherit (nixos') channel manual iso_minimal dummy;
     tests = {
       inherit (nixos'.tests)
-        containers
+        containers-imperative
+        containers-ipv4
         firewall
         ipv6
         login
@@ -62,7 +63,6 @@ in rec {
       imagemagick
       jdk
       linux
-      mysql51
       mysql55
       nginx
       nodejs

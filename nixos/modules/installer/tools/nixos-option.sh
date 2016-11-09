@@ -115,8 +115,8 @@ let
       let name = head attrsNames; rest = tail attrsNames; in
       if isOption result.options then
         walkOptions rest {
-          options = result.options.type.getSubOptionsPrefix "";
-          opt = ''(\${result.opt}.type.getSubOptionsPrefix "")'';
+          options = result.options.type.getSubOptions "";
+          opt = ''(\${result.opt}.type.getSubOptions "")'';
           cfg = ''\${result.cfg}."\${name}"'';
         }
       else
@@ -256,7 +256,7 @@ if isOption opt then
   // optionalAttrs (opt ? default) { inherit (opt) default; }
   // optionalAttrs (opt ? example) { inherit (opt) example; }
   // optionalAttrs (opt ? description) { inherit (opt) description; }
-  // optionalAttrs (opt ? type) { typename = opt.type.name; }
+  // optionalAttrs (opt ? type) { typename = opt.type.description; }
   // optionalAttrs (opt ? options) { inherit (opt) options; }
   // {
     # to disambiguate the xml output.

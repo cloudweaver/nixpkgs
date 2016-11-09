@@ -4,14 +4,14 @@
 
 stdenv.mkDerivation rec {
   name = "netsniff-ng-${version}";
-  version = "0.6.0";
+  version = "0.6.2";
 
   # Upstream recommends and supports git
   src = fetchFromGitHub rec {
     repo = "netsniff-ng";
     owner = repo;
     rev = "v${version}";
-    sha256 = "0vfs1vsrsbiqxp6nrdibxa60wivapjhj3sdpa4v90m3pfnqif46z";
+    sha256 = "1lz4hwgwdq3znlqjmvl7cw3g3ilbayn608h0hwqdf7v2jq6n67kg";
   };
 
   buildInputs = [ bison flex geoip geolite-legacy libcli libnet libnl
@@ -22,7 +22,7 @@ stdenv.mkDerivation rec {
   configurePhase = ''
     patchShebangs configure
     substituteInPlace configure --replace "which" "command -v"
-    NACL_INC_DIR=${libsodium}/include/sodium NACL_LIB=sodium ./configure
+    NACL_INC_DIR=${libsodium.dev}/include/sodium NACL_LIB=sodium ./configure
   '';
 
   enableParallelBuilding = true;

@@ -1,12 +1,8 @@
 {stdenv, fetchurl, which, openssl, ocaml, findlib}:
 
-let
-  ocaml_version = (builtins.parseDrvName ocaml.name).version;
-  version = "0.5.2";
-in
-
-stdenv.mkDerivation {
+stdenv.mkDerivation rec {
   name = "ocaml-ssl-${version}";
+  version = "0.5.2";
 
   src = fetchurl {
   url = "mirror://sourceforge/project/savonet/ocaml-ssl/0.5.2/ocaml-ssl-0.5.2.tar.gz";
@@ -26,7 +22,7 @@ stdenv.mkDerivation {
     homepage = http://savonet.rastageeks.org/;
     description = "OCaml bindings for libssl ";
     license = "LGPL+link exception";
-    platforms = ocaml.meta.platforms;
+    platforms = ocaml.meta.platforms or [];
     maintainers = [
       stdenv.lib.maintainers.z77z
     ];

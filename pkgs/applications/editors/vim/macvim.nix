@@ -1,5 +1,6 @@
 { stdenv, fetchFromGitHub, ncurses, gettext
 , pkgconfig, cscope, python, ruby, tcl, perl, luajit
+, darwin
 }:
 
 stdenv.mkDerivation rec {
@@ -72,9 +73,14 @@ stdenv.mkDerivation rec {
     )
   '';
 
+  postConfigure = ''
+    substituteInPlace src/auto/config.mk --replace "PERL_CFLAGS	=" "PERL_CFLAGS	= -I${darwin.libutil}/include"
+  '';
+
   postInstall = ''
     mkdir -p $out/Applications
     cp -r src/MacVim/build/Release/MacVim.app $out/Applications
+    rm -rf $out/MacVim.app
 
     rm $out/bin/{Vimdiff,Vimtutor,Vim,ex,rVim,rview,view}
 

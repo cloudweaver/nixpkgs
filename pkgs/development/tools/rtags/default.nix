@@ -1,30 +1,26 @@
-{ stdenv, fetchgit, cmake, llvm, openssl, clang, writeScript, bash }:
+{ stdenv, lib, fetchgit, cmake, llvmPackages, openssl, writeScript, apple_sdk, bash, emacs }:
 
-let llvm-config-wrapper = writeScript "llvm-config" ''
-      #! ${bash}/bin/bash
-      if [[ "$1" = "--cxxflags" ]]; then
-        echo $(${llvm}/bin/llvm-config "$@") -isystem ${clang.cc}/include
-      else
-        ${llvm}/bin/llvm-config "$@"
-      fi
-    '';
-
-in stdenv.mkDerivation rec {
+stdenv.mkDerivation rec {
   name = "rtags-${version}";
-  rev = "9fed420d20935faf55770765591fc2de02eeee28";
-  version = "${stdenv.lib.strings.substring 0 7 rev}";
+  version = "2.3";
 
-  buildInputs = [ cmake llvm openssl clang ];
+  buildInputs = [ cmake llvmPackages.llvm openssl llvmPackages.clang emacs ]
+    ++ lib.optional stdenv.isDarwin apple_sdk.sdk;
 
   preConfigure = ''
-    export LIBCLANG_LLVM_CONFIG_EXECUTABLE=${llvm-config-wrapper}
+    export LIBCLANG_CXXFLAGS="-isystem ${llvmPackages.clang.cc}/include $(llvm-config --cxxflags) " \
+           LIBCLANG_LIBDIR="${llvmPackages.clang.cc}/lib" \
+
+  '' + lib.optionalString stdenv.isDarwin ''
+    export CXXFLAGS="-isysroot ${apple_sdk.sdk}/" \
+           MACOSX_DEPLOYMENT_TARGET="10.9"
   '';
 
   src = fetchgit {
-    inherit rev;
+    rev = "refs/tags/v${version}";
     fetchSubmodules = true;
     url = "https://github.com/andersbakken/rtags.git";
-    sha256 = "1sb6wfknhvrgirqp65paz7kihv4zgg8g5f7a7i14i10sysalxbif";
+    sha256 = "05kzch88x2wiimygfli6vsr9i5hzgkybsya8qx4zvb6daip4b7yf";
   };
 
   meta = {
@@ -33,5 +29,6 @@ in stdenv.mkDerivation rec {
     homepage = https://github.com/andersbakken/rtags;
 
     license = stdenv.lib.licenses.gpl3;
+    platforms = stdenv.lib.platforms.allBut [ "i686-linux" ];
   };
 }

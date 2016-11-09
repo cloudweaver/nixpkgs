@@ -1,26 +1,33 @@
 {stdenv, fetchurl}:
 
-let
-  version = "5.3.9";
-in
-stdenv.mkDerivation {
+stdenv.mkDerivation rec {
   name = "unrar-${version}";
+  version = "5.4.5";
 
   src = fetchurl {
     url = "http://www.rarlab.com/rar/unrarsrc-${version}.tar.gz";
-    sha256 = "0nsxwg1zp3s34wyjznwmy2cc5929yk7m5smq11cqdb6hmql3fngz";
+    sha256 = "0v3rz2245bp2nh4115ysqv34vqlrpln9y11fnlzqj8i46f2caw74";
   };
 
-  preBuild = ''
-    export buildFlags="CXX=$CXX"
+  postPatch = ''
+    sed 's/^CXX=g++/#CXX/' -i makefile
+  '';
+
+  buildPhase = ''
+    make unrar
+    make clean
+    make lib
   '';
 
   installPhase = ''
-    installBin unrar
+    install -Dt "$out/bin" unrar
 
     mkdir -p $out/share/doc/unrar
     cp acknow.txt license.txt \
         $out/share/doc/unrar
+
+    install -Dm755 libunrar.so $out/lib/libunrar.so
+    install -D dll.hpp $out/include/unrar/dll.hpp
   '';
 
   setupHook = ./setup-hook.sh;

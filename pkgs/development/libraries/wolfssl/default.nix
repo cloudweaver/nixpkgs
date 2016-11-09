@@ -1,18 +1,26 @@
-{ stdenv, fetchurl, autoconf, automake, libtool }:
+{ stdenv, fetchFromGitHub, autoreconfHook }:
 
 stdenv.mkDerivation rec {
   name = "wolfssl-${version}";
-  version = "3.7.0";
+  version = "3.9.8";
 
-  src = fetchurl {
-    url    = "https://github.com/wolfSSL/wolfssl/archive/v${version}.tar.gz";
-    sha256 = "1r1awivral4xjjvnna9lrfz2rh84rcbp04834rymbsz0kbyykgb6";
+  src = fetchFromGitHub {
+    owner = "wolfSSL";
+    repo = "wolfssl";
+    rev = "v${version}";
+    sha256 = "0b1a9rmzpzjblj0gsrzas2aljivd0gfimcsj8gjl80ng25zgmaxr";
   };
 
-  nativeBuildInputs = [ autoconf automake libtool ];
+  outputs = [ "out" "dev" "doc" "lib" ];
 
-  preConfigure = ''
-    ./autogen.sh
+  nativeBuildInputs = [ autoreconfHook ];
+
+  postInstall = ''
+     # fix recursive cycle:
+     # wolfssl-config points to dev, dev propagates bin
+     moveToOutput bin/wolfssl-config "$dev"
+     # moveToOutput also removes "$out" so recreate it
+     mkdir -p "$out"
   '';
 
   meta = with stdenv.lib; {

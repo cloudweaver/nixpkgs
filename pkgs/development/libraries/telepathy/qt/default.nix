@@ -1,13 +1,16 @@
-{ stdenv, fetchurl, cmake, qtbase, pkgconfig, python, dbus_glib, dbus_daemon
-, telepathy_farstream, telepathy_glib, pythonDBus, fetchpatch }:
+{ stdenv, fetchurl, cmake, qtbase, pkgconfig, python2Packages, dbus_glib, dbus_daemon
+, telepathy_farstream, telepathy_glib, fetchpatch }:
 
-stdenv.mkDerivation rec {
+let
+  inherit (python2Packages) python dbus-python;
+in stdenv.mkDerivation rec {
   name = "telepathy-qt-0.9.6.1";
 
   src = fetchurl {
     url = "http://telepathy.freedesktop.org/releases/telepathy-qt/${name}.tar.gz";
     sha256 = "1y51c6rxk5qvmab98c8rnmrlyk27hnl248casvbq3cd93sav8vj9";
   };
+
   patches = let
     mkUrl = hash: "http://cgit.freedesktop.org/telepathy/telepathy-qt/patch/?id=" + hash;
     in [
@@ -29,14 +32,14 @@ stdenv.mkDerivation rec {
     ];
 
   nativeBuildInputs = [ cmake pkgconfig python ];
-  propagatedBuildInputs = [ qtbase dbus_glib telepathy_farstream telepathy_glib pythonDBus ];
+  propagatedBuildInputs = [ qtbase dbus_glib telepathy_farstream telepathy_glib dbus-python ];
 
   buildInputs = stdenv.lib.optional doCheck dbus_daemon;
 
   cmakeFlags = "-DDESIRED_QT_VERSION=${builtins.substring 0 1 qtbase.version}";
 
   # should be removable after the next update
-  NIX_CFLAGS_COMPILE = [ "-Wno-error=cpp" "-Wno-error=unused-but-set-variable" ];
+  NIX_CFLAGS_COMPILE = [ "-Wno-error" ];
 
   preBuild = ''
     NIX_CFLAGS_COMPILE+=" `pkg-config --cflags dbus-glib-1`"

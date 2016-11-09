@@ -3,12 +3,12 @@
 with stdenv.lib;
 
 stdenv.mkDerivation rec {
-  version = "2.2.0";
+  version = "2.4.0";
   name = "elasticsearch-${version}";
 
   src = fetchurl {
     url = "https://download.elasticsearch.org/elasticsearch/release/org/elasticsearch/distribution/tar/elasticsearch/${version}/${name}.tar.gz";
-    sha256 = "0c2d0mpcr8lpvifvgp2pfj7avdi7fa8a5vib0gqdap7mw60wqw7d";
+    sha256 = "1jglmj1dnh1n2niyds6iyrpf6x6ppqgkivzy6qabkjvvmr013q1s";
   };
 
   patches = [ ./es-home-2.x.patch ];
@@ -18,7 +18,7 @@ stdenv.mkDerivation rec {
 
   installPhase = ''
     mkdir -p $out
-    cp -R bin config lib $out
+    cp -R bin config lib modules $out
 
     # don't want to have binary with name plugin
     mv $out/bin/plugin $out/bin/elasticsearch-plugin

@@ -17,15 +17,14 @@ in rec {
 
   unitOption = mkOptionType {
     name = "systemd option";
-    typerep = "(systemdOption)";
-    merge = _module: loc: defs:
+    merge = loc: defs:
       let
         defs' = filterOverrides defs;
         defs'' = getValues defs';
       in
         if isList (head defs'')
         then concatLists defs''
-        else mergeOneOption _module loc defs';
+        else mergeOneOption loc defs';
   };
 
   sharedOptions = {
@@ -76,6 +75,12 @@ in rec {
       default = "";
       type = types.str;
       description = "Description of this unit used in systemd messages and progress indicators.";
+    };
+
+    documentation = mkOption {
+      default = [];
+      type = types.listOf types.str;
+      description = "A list of URIs referencing documentation for this unit or its configuration.";
     };
 
     requires = mkOption {
@@ -194,7 +199,7 @@ in rec {
 
     path = mkOption {
       default = [];
-      apply = ps: "${makeSearchPath "bin" ps}:${makeSearchPath "sbin" ps}";
+      apply = ps: "${makeBinPath ps}:${makeSearchPathOutput "bin" "sbin" ps}";
       description = ''
         Packages added to the service's <envar>PATH</envar>
         environment variable.  Both the <filename>bin</filename>
@@ -310,8 +315,8 @@ in rec {
     };
 
     startAt = mkOption {
-      type = types.str;
-      default = "";
+      type = with types; either str (listOf str);
+      default = [];
       example = "Sun 14:00:00";
       description = ''
         Automatically start this unit at the given date/time, which
@@ -321,6 +326,7 @@ in rec {
         to adding a corresponding timer unit with
         <option>OnCalendar</option> set to the value given here.
       '';
+      apply = v: if isList v then v else [ v ];
     };
 
   };

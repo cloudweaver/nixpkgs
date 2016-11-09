@@ -10,14 +10,18 @@ in
   imports = [
     ./afterstep.nix
     ./bspwm.nix
-    ./clfswm.nix
+    ./bspwm-unstable.nix
     ./compiz.nix
     ./dwm.nix
+    ./exwm.nix
     ./fluxbox.nix
     ./herbstluftwm.nix
     ./i3.nix
+    ./jwm.nix
     ./metacity.nix
+    ./mwm.nix
     ./openbox.nix
+    ./pekwm.nix
     ./notion.nix
     ./ratpoison.nix
     ./sawfish.nix

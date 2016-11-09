@@ -1,4 +1,4 @@
-{ stdenv, fetchurl, pkgconfig, libpng, libjpeg, expat, libXaw
+{ stdenv, fetchurl, pkgconfig, libpng, libjpeg, expat
 , yacc, libtool, fontconfig, pango, gd, xorg, gts, libdevil, gettext, cairo
 , flex
 }:
@@ -12,31 +12,26 @@ stdenv.mkDerivation rec {
     sha256 = "17l5czpvv5ilmg17frg0w4qwf89jzh2aglm9fgx0l0aakn6j7al1";
   };
 
+  hardeningDisable = [ "fortify" ];
+
   patches =
     [ ./0001-vimdot-lookup-vim-in-PATH.patch
-    
+
       # NOTE: Once this patch is removed, flex can probably be removed from
       # buildInputs.
       ./cve-2014-9157.patch
     ];
 
   buildInputs =
-    [ pkgconfig libpng libjpeg expat yacc libtool fontconfig gd gts libdevil flex
-    ] ++ stdenv.lib.optionals (xorg != null) [ xorg.xlibsWrapper xorg.libXrender pango libXaw ]
+    [ pkgconfig libpng libjpeg expat yacc libtool fontconfig gd gts libdevil flex pango
+    ] ++ stdenv.lib.optionals (xorg != null)
+      (with xorg; [ xlibsWrapper libXrender libXaw libXpm ])
     ++ stdenv.lib.optional (stdenv.system == "x86_64-darwin") gettext;
 
   CPPFLAGS = stdenv.lib.optionalString (xorg != null && stdenv.system == "x86_64-darwin")
-    "-I${cairo}/include/cairo";
+    "-I${cairo.dev}/include/cairo";
 
-  configureFlags =
-    [ "--with-pngincludedir=${libpng}/include"
-      "--with-pnglibdir=${libpng}/lib"
-      "--with-jpegincludedir=${libjpeg}/include"
-      "--with-jpeglibdir=${libjpeg}/lib"
-      "--with-expatincludedir=${expat}/include"
-      "--with-expatlibdir=${expat}/lib"
-    ]
-    ++ stdenv.lib.optional (xorg == null) "--without-x";
+  configureFlags = stdenv.lib.optional (xorg == null) "--without-x";
 
   postPatch = stdenv.lib.optionalString stdenv.isDarwin ''
     for foo in cmd/dot/Makefile.in cmd/edgepaint/Makefile.in \
@@ -68,8 +63,8 @@ stdenv.mkDerivation rec {
       interfaces for other technical domains.
     '';
 
-    hydraPlatforms = stdenv.lib.platforms.linux ++ stdenv.lib.platforms.darwin;
-    maintainers = with stdenv.lib.maintainers; [ simons bjornfor raskin ];
+    platforms = stdenv.lib.platforms.linux ++ stdenv.lib.platforms.darwin;
+    maintainers = with stdenv.lib.maintainers; [ bjornfor raskin ];
     downloadPage = "http://www.graphviz.org/pub/graphviz/ARCHIVE/";
     inherit version;
     updateWalker = true;

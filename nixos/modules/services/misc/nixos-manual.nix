@@ -11,27 +11,19 @@ let
 
   cfg = config.services.nixosManual;
 
-  versionModule =
-    { system.nixosVersionSuffix = config.system.nixosVersionSuffix;
-      system.nixosRevision = config.system.nixosRevision;
-      nixpkgs.system = config.nixpkgs.system;
-    };
-
-  internalModule = { _module = config._module; };
-
   /* For the purpose of generating docs, evaluate options with each derivation
     in `pkgs` (recursively) replaced by a fake with path "\${pkgs.attribute.path}".
     It isn't perfect, but it seems to cover a vast majority of use cases.
     Caveat: even if the package is reached by a different means,
     the path above will be shown and not e.g. `${config.services.foo.package}`. */
   manual = import ../../../doc/manual {
-    inherit pkgs;
-    version = config.system.nixosVersion;
-    revision = config.system.nixosRevision;
+    inherit pkgs config;
+    version = config.system.nixosRelease;
+    revision = "release-${config.system.nixosRelease}";
     options =
       let
         scrubbedEval = evalModules {
-          modules = [ versionModule ] ++ baseModules ++ [ internalModule ];
+          modules = [ { nixpkgs.system = config.nixpkgs.system; } ] ++ baseModules;
           args = (config._module.args) // { modules = [ ]; };
           specialArgs = { pkgs = scrubDerivations "pkgs" pkgs; };
         };
@@ -45,7 +37,6 @@ let
           )
           pkgSet;
       in scrubbedEval.options;
-    internalModule = config._module;
   };
 
   entry = "${manual.manual}/share/doc/nixos/index.html";

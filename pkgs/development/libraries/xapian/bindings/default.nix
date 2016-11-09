@@ -1,15 +1,18 @@
 { stdenv, composableDerivation, fetchurl, xapian, pkgconfig, zlib
-, python ? null, php ? null, ruby ? null }:
+, python ? null, sphinx ? null, php ? null, ruby ? null }:
+
+assert (python != null) -> (sphinx != null);
 
 let inherit (composableDerivation) wwf; in
 
 composableDerivation.composableDerivation {} rec {
 
-  name = "xapian-bindings-1.2.8";
+  name = "xapian-bindings-${version}";
+  version = (builtins.parseDrvName xapian.name).version;
 
   src = fetchurl {
-    url = "http://oligarchy.co.uk/xapian/1.2.8/${name}.tar.gz";
-    sha256 = "eb740c619c75d288e65a1c2f86faecdca53d44d3f9896bcc080085839887b124";
+    url = "http://oligarchy.co.uk/xapian/${version}/${name}.tar.xz";
+    sha256 = "0lv2zblayfax4v7z3sj067b0av0phf3gc2s2d1cvkw0bkl07mv1s";
   };
 
   buildInputs = [ xapian pkgconfig zlib ];
@@ -19,13 +22,24 @@ composableDerivation.composableDerivation {} rec {
          wwf {
            name = "python";
            enable = {
-            buildInputs = [ python ];
+            buildInputs = [ python sphinx ];
+
+            # Our `sphinx-build` binary is a shell wrapper around
+            # `sphinx-build` python code. Makefile tries to execute it
+            # using python2 and fails. Fixing that here.
+            patchPhase = ''
+              for a in python/Makefile* ; do
+                substituteInPlace $a \
+                  --replace '$(PYTHON2) $(SPHINX_BUILD)' '$(SPHINX_BUILD)'
+              done
+            '';
+
             # export same env vars as in pythonNew
             preConfigure = ''
               export PYTHON_LIB=$out/lib/${python.libPrefix}/site-packages
               mkdir -p $out/nix-support
-              echo "export NIX_PYTHON_SITES=\"$out:\$NIX_PYTHON_SITES\"" >> $out/nix-support/setup-hook 
-              echo "export PYTHONPATH=\"$PYTHON_LIB:\$PYTHONPATH\"" >> $out/nix-support/setup-hook 
+              echo "export NIX_PYTHON_SITES=\"$out:\$NIX_PYTHON_SITES\"" >> $out/nix-support/setup-hook
+              echo "export PYTHONPATH=\"$PYTHON_LIB:\$PYTHONPATH\"" >> $out/nix-support/setup-hook
             '';
            };
          }
@@ -46,8 +60,8 @@ composableDerivation.composableDerivation {} rec {
                export RUBY_LIB=$out/${ruby.libPath}
                export RUBY_LIB_ARCH=$RUBY_LIB
                mkdir -p $out/nix-support
-               echo "export RUBYLIB=\"$RUBY_LIB:\$RUBYLIB\"" >> $out/nix-support/setup-hook 
-               echo "export GEM_PATH=\"$out:\$GEM_PATH\"" >> $out/nix-support/setup-hook 
+               echo "export RUBYLIB=\"$RUBY_LIB:\$RUBYLIB\"" >> $out/nix-support/setup-hook
+               echo "export GEM_PATH=\"$out:\$GEM_PATH\"" >> $out/nix-support/setup-hook
              '';
            };
          }
@@ -60,14 +74,15 @@ composableDerivation.composableDerivation {} rec {
 
   cfg = {
     pythonSupport = true;
-    phpSupport = true;
+    phpSupport = false;
     rubySupport = true;
   };
 
-  meta = { 
+  meta = {
     description = "Bindings for the Xapian library";
     homepage = xapian.meta.homepage;
     license = stdenv.lib.licenses.gpl2Plus;
     maintainers = [ stdenv.lib.maintainers.chaoflow ];
+    platforms = stdenv.lib.platforms.unix;
   };
 }

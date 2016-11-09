@@ -3,12 +3,16 @@
 assert enableCapabilities -> stdenv.isLinux;
 
 stdenv.mkDerivation rec {
-  name = "libgcrypt-1.6.5";
+  name = "libgcrypt-${version}";
+  version = "1.7.3";
 
   src = fetchurl {
     url = "mirror://gnupg/libgcrypt/${name}.tar.bz2";
-    sha256 = "0959mwfzsxhallxdqlw359xg180ll2skxwyy35qawmfl89cbr7pl";
+    sha256 = "0wbh6fq5zi9wg2xcfvfpwh7dv52jihivx1vm4h91c2kx0w8n3b6x";
   };
+
+  outputs = [ "out" "dev" "info" ];
+  outputBin = "dev";
 
   buildInputs =
     [ libgpgerror ]
@@ -16,10 +20,10 @@ stdenv.mkDerivation rec {
 
   # Make sure libraries are correct for .pc and .la files
   # Also make sure includes are fixed for callers who don't use libgpgcrypt-config
-  postInstall = ''
-    sed -i 's,#include <gpg-error.h>,#include "${libgpgerror}/include/gpg-error.h",g' $out/include/gcrypt.h
+  postFixup = ''
+    sed -i 's,#include <gpg-error.h>,#include "${libgpgerror.dev}/include/gpg-error.h",g' "$dev/include/gcrypt.h"
   '' + stdenv.lib.optionalString enableCapabilities ''
-    sed -i 's,\(-lcap\),-L${libcap}/lib \1,' $out/lib/libgcrypt.la
+    sed -i 's,\(-lcap\),-L${libcap.lib}/lib \1,' $out/lib/libgcrypt.la
   '';
 
   # TODO: figure out why this is even necessary and why the missing dylib only crashes
@@ -31,12 +35,12 @@ stdenv.mkDerivation rec {
 
   doCheck = true;
 
-  meta = {
+  meta = with stdenv.lib; {
     homepage = https://www.gnu.org/software/libgcrypt/;
     description = "General-pupose cryptographic library";
-    license = lib.licenses.lgpl2Plus;
-    platforms = lib.platforms.all;
-    maintainers = [ lib.maintainers.wkennington ];
+    license = licenses.lgpl2Plus;
+    platforms = platforms.all;
+    maintainers = [ maintainers.wkennington maintainers.vrthra ];
     repositories.git = git://git.gnupg.org/libgcrypt.git;
   };
 }

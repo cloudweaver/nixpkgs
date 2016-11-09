@@ -26,7 +26,7 @@ stdenv.mkDerivation rec {
 
   patches = [ ./keep-path.patch dots_in_usernames ];
 
-  outputs = [ "out" "su" ];
+  outputs = [ "out" "su" "man" ];
 
   # Assume System V `setpgrp (void)', which is the default on GNU variants
   # (`AC_FUNC_SETPGRP' is not cross-compilation capable.)
@@ -37,7 +37,7 @@ stdenv.mkDerivation rec {
 
   preBuild = assert glibc != null;
     ''
-      substituteInPlace lib/nscd.c --replace /usr/sbin/nscd ${glibc}/sbin/nscd
+      substituteInPlace lib/nscd.c --replace /usr/sbin/nscd ${glibc.bin}/bin/nscd
     '';
 
   postInstall =
@@ -53,5 +53,10 @@ stdenv.mkDerivation rec {
   meta = {
     homepage = http://pkg-shadow.alioth.debian.org/;
     description = "Suite containing authentication-related tools such as passwd and su";
+    platforms = stdenv.lib.platforms.linux;
+  };
+
+  passthru = {
+    shellPath = "/bin/nologin";
   };
 }

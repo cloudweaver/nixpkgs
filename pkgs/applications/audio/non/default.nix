@@ -1,23 +1,23 @@
-{ stdenv, fetchFromGitHub, pkgconfig, python2, cairo, libjpeg, ntk, libjack2, libsndfile,
-ladspaH, liblrdf, liblo, libsigcxx
+{ stdenv, fetchFromGitHub, pkgconfig, python2, cairo, libjpeg, ntk, libjack2
+, libsndfile, ladspaH, liblrdf, liblo, libsigcxx
 }:
 
 stdenv.mkDerivation rec {
   name = "non-${version}";
-  version = "2016-02-07";
+  version = "2016-04-05";
   src = fetchFromGitHub {
     owner = "original-male";
     repo = "non";
-    rev = "1ef382fbbea598fdb56b25244a703c64ecaf8446";
-    sha256 = "1mi3nm0nrrqlk36920irvqf5080lbnj1qc8vnxspgwkjjqgdc22g";
+    rev = "16885e69fe865495dc32d869d1454ab148b0dca6";
+    sha256 = "1nwzzgcdpbqh5kjvz40yy5nmzvpp8gcr9biyhhwi68s5bsg972ss";
   };
 
-    buildInputs = [ pkgconfig python2 cairo libjpeg ntk libjack2 libsndfile
+  buildInputs = [ pkgconfig python2 cairo libjpeg ntk libjack2 libsndfile
     ladspaH liblrdf liblo libsigcxx
-    ];
-    configurePhase = ''python waf configure --prefix=$out'';
-    buildPhase = ''python waf build'';
-    installPhase = ''python waf install'';
+  ];
+  configurePhase = "python waf configure --prefix=$out";
+  buildPhase = "python waf build";
+  installPhase = "python waf install";
 
   meta = {
     description = "Lightweight and lightning fast modular Digital Audio Workstation";

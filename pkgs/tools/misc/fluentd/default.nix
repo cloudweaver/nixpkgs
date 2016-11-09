@@ -1,12 +1,10 @@
 { stdenv, lib, bundlerEnv, ruby, curl }:
 
 bundlerEnv {
-  name = "fluentd-0.12.6";
-
   inherit ruby;
-  gemfile = ./Gemfile;
-  lockfile = ./Gemfile.lock;
-  gemset = ./gemset.nix;
+
+  pname = "fluentd";
+  gemdir = ./.;
 
   meta = with lib; {
     description = "A data collector";

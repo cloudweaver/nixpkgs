@@ -37,7 +37,9 @@ in
 
     services.dbus.packages = [ gnome3.gvfs ];
 
-    services.udev.packages = [ pkgs.libmtp ];
+    systemd.packages = [ gnome3.gvfs ];
+
+    services.udev.packages = [ pkgs.libmtp.bin ];
 
   };
 

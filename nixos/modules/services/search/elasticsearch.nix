@@ -129,7 +129,7 @@ in {
     systemd.services.elasticsearch = {
       description = "Elasticsearch Daemon";
       wantedBy = [ "multi-user.target" ];
-      after = [ "network-interfaces.target" ];
+      after = [ "network.target" ];
       path = [ pkgs.inetutils ];
       environment = {
         ES_HOME = cfg.dataDir;
@@ -145,10 +145,11 @@ in {
         # Install plugins
         ln -sfT ${esPlugins}/plugins ${cfg.dataDir}/plugins
         ln -sfT ${cfg.package}/lib ${cfg.dataDir}/lib
+        ln -sfT ${cfg.package}/modules ${cfg.dataDir}/modules
         if [ "$(id -u)" = 0 ]; then chown -R elasticsearch ${cfg.dataDir}; fi
       '';
       postStart = mkBefore ''
-        until ${pkgs.curl}/bin/curl -s -o /dev/null ${cfg.listenAddress}:${toString cfg.port}; do
+        until ${pkgs.curl.bin}/bin/curl -s -o /dev/null ${cfg.listenAddress}:${toString cfg.port}; do
           sleep 1
         done
       '';
@@ -156,11 +157,14 @@ in {
 
     environment.systemPackages = [ cfg.package ];
 
-    users.extraUsers = singleton {
-      name = "elasticsearch";
-      uid = config.ids.uids.elasticsearch;
-      description = "Elasticsearch daemon user";
-      home = cfg.dataDir;
+    users = {
+      groups.elasticsearch.gid = config.ids.gids.elasticsearch;
+      users.elasticsearch = {
+        uid = config.ids.uids.elasticsearch;
+        description = "Elasticsearch daemon user";
+        home = cfg.dataDir;
+        group = "elasticsearch";
+      };
     };
   };
 }

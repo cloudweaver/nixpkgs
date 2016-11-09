@@ -1,4 +1,4 @@
-{ stdenv, lib, bundler, fetchFromGitHub, bundlerEnv, defaultGemConfig, libiconv, ruby
+{ stdenv, lib, bundler, fetchFromGitHub, bundlerEnv, libiconv, ruby
 , tzdata, git, nodejs, procps
 }:
 
@@ -15,7 +15,7 @@ let
     meta = with lib; {
       homepage = http://www.gitlab.com/;
       platforms = platforms.linux;
-      maintainers = [ ];
+      maintainers = with maintainers; [ fpletz ];
       license = licenses.mit;
     };
   };
@@ -24,20 +24,19 @@ in
 
 stdenv.mkDerivation rec {
   name = "gitlab-${version}";
-  version = "8.5.1";
+  version = "8.12.8";
 
-  buildInputs = [ ruby bundler tzdata git nodejs procps ];
+  buildInputs = [ env ruby bundler tzdata git nodejs procps ];
 
   src = fetchFromGitHub {
     owner = "gitlabhq";
     repo = "gitlabhq";
     rev = "v${version}";
-    sha256 = "1pn5r4axzjkgdjr59y3wgxsd2n83zfd5bry1g2w4c2qw0wcw7zqb";
+    sha256 = "1l2r3mjyra53wpq724d974zv9ax5hb1qrdsz4071b2p34s70gbl3";
   };
 
   patches = [
     ./remove-hardcoded-locations.patch
-    ./disable-dump-schema-after-migration.patch
     ./nulladapter.patch
   ];
 
@@ -66,10 +65,12 @@ stdenv.mkDerivation rec {
   '';
 
   buildPhase = ''
-    export GEM_HOME=${env}/${ruby.gemPath}
     mv config/gitlab.yml.example config/gitlab.yml
-    GITLAB_DATABASE_ADAPTER=nulldb bundle exec rake assets:precompile RAILS_ENV=production
+    GITLAB_DATABASE_ADAPTER=nulldb \
+      SKIP_STORAGE_VALIDATION=true \
+      rake assets:precompile RAILS_ENV=production
     mv config/gitlab.yml config/gitlab.yml.example
+    rm config/secrets.yml
     mv config config.dist
   '';
 

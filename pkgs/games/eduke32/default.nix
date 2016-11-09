@@ -1,7 +1,8 @@
-{ stdenv, fetchurl, flac, gtk, libvorbis, libvpx, makeDesktopItem, mesa, nasm
+{ stdenv, fetchurl, flac, gtk2, libvorbis, libvpx, makeDesktopItem, mesa, nasm
 , pkgconfig, SDL2, SDL2_mixer }:
 
 let
+  year = "2015";
   date = "20150420";
   rev = "5160";
 in stdenv.mkDerivation rec {
@@ -9,11 +10,11 @@ in stdenv.mkDerivation rec {
   version = "${date}-${rev}";
 
   src = fetchurl {
-    url = "http://dukeworld.duke4.net/eduke32/synthesis/${version}/eduke32_src_${version}.tar.xz";
+    url = "http://dukeworld.duke4.net/eduke32/synthesis/old/${year}/${version}/eduke32_src_${version}.tar.xz";
     sha256 = "1nlq5jbglg00c1z1vsyl627fh0mqfxvk5qyxav5vzla2b4svik2v";
   };
 
-  buildInputs = [ flac gtk libvorbis libvpx mesa SDL2 SDL2_mixer ]
+  buildInputs = [ flac gtk2 libvorbis libvpx mesa SDL2 SDL2_mixer ]
     ++ stdenv.lib.optional (stdenv.system == "i686-linux") nasm;
   nativeBuildInputs = [ pkgconfig ];
 
@@ -70,5 +71,6 @@ in stdenv.mkDerivation rec {
     license = licenses.gpl2Plus;
     homepage = http://eduke32.com;
     maintainers = with maintainers; [ nckx sander ];
+    platforms = with platforms; linux;
   };
 }

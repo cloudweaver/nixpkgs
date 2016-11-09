@@ -6,13 +6,15 @@ let
 
   mainCfg = config.services.httpd;
 
-  httpd = mainCfg.package;
+  httpd = mainCfg.package.out;
 
   version24 = !versionOlder httpd.version "2.4";
 
   httpdConf = mainCfg.configFile;
 
-  php = pkgs.php.override { apacheHttpd = httpd; };
+  php = mainCfg.phpPackage.override { apacheHttpd = httpd.dev; /* otherwise it only gets .out */ };
+
+  phpMajorVersion = head (splitString "." php.version);
 
   getPort = cfg: if cfg.port != 0 then cfg.port else if cfg.enableSSL then 443 else 80;
 
@@ -48,7 +50,8 @@ let
           if svc ? function then svc.function
           else import (toString "${toString ./.}/${if svc ? serviceType then svc.serviceType else svc.serviceName}.nix");
         config = (evalModules
-          { modules = [ { options = res.options; config = svc.config or svc; } ] ++ [ { _module.check = false; } ];
+          { modules = [ { options = res.options; config = svc.config or svc; } ];
+            check = false;
           }).config;
         defaults = {
           extraConfig = "";
@@ -336,7 +339,8 @@ let
         allModules =
           concatMap (svc: svc.extraModulesPre) allSubservices
           ++ map (name: {inherit name; path = "${httpd}/modules/mod_${name}.so";}) apacheModules
-          ++ optional enablePHP { name = "php5"; path = "${php}/modules/libphp5.so"; }
+          ++ optional mainCfg.enableMellon { name = "auth_mellon"; path = "${pkgs.apacheHttpdPackages.mod_auth_mellon}/modules/mod_auth_mellon.so"; }
+          ++ optional enablePHP { name = "php${phpMajorVersion}"; path = "${php}/modules/libphp${phpMajorVersion}.so"; }
           ++ concatMap (svc: svc.extraModules) allSubservices
           ++ extraForeignModules;
       in concatMapStrings load allModules
@@ -405,7 +409,7 @@ let
         ([ mainCfg.phpOptions ] ++ (map (svc: svc.phpOptions) allSubservices));
     }
     ''
-      cat ${php}/etc/php-recommended.ini > $out
+      cat ${php}/etc/php.ini > $out
       echo "$options" >> $out
     '';
 
@@ -540,10 +544,25 @@ in
         '';
       };
 
+      enableMellon = mkOption {
+        type = types.bool;
+        default = false;
+        description = "Whether to enable the mod_auth_mellon module.";
+      };
+
       enablePHP = mkOption {
         type = types.bool;
         default = false;
         description = "Whether to enable the PHP module.";
+      };
+
+      phpPackage = mkOption {
+        type = types.package;
+        default = pkgs.php;
+        defaultText = "pkgs.php";
+        description = ''
+          Overridable attribute of the PHP package to use.
+        '';
       };
 
       phpOptions = mkOption {
@@ -649,6 +668,7 @@ in
 
         environment =
           optionalAttrs enablePHP { PHPRC = phpIni; }
+          // optionalAttrs mainCfg.enableMellon { LD_LIBRARY_PATH  = "${pkgs.xmlsec}/lib"; }
           // (listToAttrs (concatMap (svc: svc.globalEnvVars) allSubservices));
 
         preStart =
@@ -684,6 +704,7 @@ in
 
         serviceConfig.ExecStart = "@${httpd}/bin/httpd httpd -f ${httpdConf}";
         serviceConfig.ExecStop = "${httpd}/bin/httpd -f ${httpdConf} -k graceful-stop";
+        serviceConfig.ExecReload = "${httpd}/bin/httpd -f ${httpdConf} -k graceful";
         serviceConfig.Type = "forking";
         serviceConfig.PIDFile = "${mainCfg.stateDir}/httpd.pid";
         serviceConfig.Restart = "always";
