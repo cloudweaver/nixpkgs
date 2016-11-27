@@ -2,11 +2,11 @@
 , libXScrnSaver, speex, curl, libxml2, libxslt }:
 
 stdenv.mkDerivation {
-  name = "retroshare-0.5.5c";
+  name = "retroshare-0.6.1";
 
   src = fetchurl {
-    url = mirror://sourceforge/project/retroshare/RetroShare/0.5.5c/retroshare_0.5.5-0.7068.tar.gz;
-    sha256 = "0l2n4pr1hq66q6qa073hrdx3s3d7iw54z8ay1zy82zhk2rwhsavp";
+    url = "https://github.com/RetroShare/RetroShare/archive/0.6.1.tar.gz";
+    sha256 = "0hpygh410za8q4flz39y59rb0f5cbrf1aakwcq7hvy1q2p3bdysg";
   };
 
   NIX_CFLAGS_COMPILE = [ "-I${glib.dev}/include/glib-2.0" "-I${glib.dev}/lib/glib-2.0/include" "-I${libxml2.dev}/include/libxml2" ];
@@ -25,7 +25,7 @@ stdenv.mkDerivation {
   buildInputs = [ speex qt4 qmake4Hook libupnp gpgme gnome3.libgnome_keyring glib libssh pkgconfig
                   protobuf bzip2 libXScrnSaver curl libxml2 libxslt ];
 
-  sourceRoot = "retroshare-0.5.5/src";
+  sourceRoot = "RetroShare-0.6.1";
 
   preConfigure = ''
     qmakeFlags="$qmakeFlags DESTDIR=$out"
@@ -45,10 +45,10 @@ stdenv.mkDerivation {
   '';
 
   meta = with stdenv.lib; {
-    description = "";
-    homepage = http://retroshare.sourceforge.net/;
-    #license = licenses.bsd2;
-    platforms = platforms.linux;
+    description = "A decentralized friend-to-friend network client";
+    homepage = http://retroshare.net/;
+    license = licenses.gpl2Plus;
+    platforms = with platforms; [ linux darwin ];
     maintainers = [ maintainers.domenkozar ];
   };
 }
