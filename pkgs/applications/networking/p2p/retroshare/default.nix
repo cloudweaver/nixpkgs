@@ -48,7 +48,7 @@ stdenv.mkDerivation {
     description = "A decentralized friend-to-friend network client";
     homepage = http://retroshare.net/;
     license = licenses.gpl2Plus;
-    platforms = with platforms; [ linux darwin ];
+    platforms = with platforms; linux ++ darwin;
     maintainers = [ maintainers.domenkozar ];
   };
 }
